@@ -34,6 +34,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         CableForceSensor.cpp
         temperaturehumiditysensor.h temperaturehumiditysensor.cpp
         expansionjointsensor.h expansionjointsensor.cpp
+        deflection.cpp deflection.h displacement.cpp displacement.h
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET BridgeMonitor APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
