@@ -17,7 +17,6 @@ public:
     void addSensor(Sensor *s);
     void removeSensor(int index);
     int sensorCount() const;
-    w
     // 增删传感器
 };
 
