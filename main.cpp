@@ -8,5 +8,6 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.show();
     w.close();
+    w.close();
     return QCoreApplication::exec();
 }
