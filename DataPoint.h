@@ -12,4 +12,5 @@ public:
     QDateTime timeStamp;
     QVector<double> value;
 };
+
 #endif // DATAPOINT_H
