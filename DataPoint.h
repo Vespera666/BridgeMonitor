@@ -1,7 +1,7 @@
 #ifndef DATAPOINT_H
 #define DATAPOINT_H
 
-#endif // DATAPOINT_H
+
 
 #include <QDateTime>
 #include <QVector>
@@ -12,3 +12,4 @@ public:
     QDateTime timeStamp;
     QVector<double> value;
 };
+#endif // DATAPOINT_H

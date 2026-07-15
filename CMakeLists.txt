@@ -28,6 +28,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         sensor.h sensor.cpp
         filemanager.h filemanager.cpp
         windsensor.h windsensor.cpp
+        VibrationSensor.h
+        VibrationSensor.cpp
+        CableForceSensor.h
+        CableForceSensor.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET BridgeMonitor APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
