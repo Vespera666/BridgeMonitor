@@ -4,10 +4,7 @@
 #include <QRandomGenerator>
 #include <QtMath>
 
-WindSensor::WindSensor()
-{
-
-}
+WindSensor::WindSensor() {}
 
 QString WindSensor::sensorType() const
 {
@@ -16,14 +13,12 @@ QString WindSensor::sensorType() const
 
 QStringList WindSensor::fieldNames() const
 {
-    return {QStringLiteral("风速"),
-            QStringLiteral("风向")};
+    return {QStringLiteral("风速"), QStringLiteral("风向")};
 }
 
 QStringList WindSensor::fieldUnits() const
 {
-    return {QStringLiteral("m/s"),
-            QStringLiteral("°")};
+    return {QStringLiteral("m/s"), QStringLiteral("°")};
 }
 
 QVector<DataPoint> WindSensor::loadFile(const QString &filePath)

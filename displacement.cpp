@@ -6,12 +6,12 @@
 
 DisplacementSensor::DisplacementSensor()
 {
-    name         = QStringLiteral("位移计");
-    size         = QStringLiteral("标准");
-    model        = QStringLiteral("DISP-100");
+    name = QStringLiteral("位移计");
+    size = QStringLiteral("标准");
+    model = QStringLiteral("DISP-100");
     manufacturer = QStringLiteral("通用");
-    generDate    = QDate(2024, 1, 1);
-    frequency    = 1;
+    generDate = QDate(2024, 1, 1);
+    frequency = 1;
 }
 
 QString DisplacementSensor::sensorType() const
@@ -44,9 +44,8 @@ QVector<DataPoint> DisplacementSensor::generateMockData(int count)
         DataPoint dp;
         dp.timeStamp = base.addSecs(i * frequency);
         // 位移范围 -5 ~ +5 mm，正弦波 + 噪声
-        double value = 3.0 * qSin(i * 0.15)
-                     + 1.5 * qSin(i * 0.05)
-                     + (rng->generateDouble() - 0.5) * 1.0;
+        double value = 3.0 * qSin(i * 0.15) + 1.5 * qSin(i * 0.05)
+                       + (rng->generateDouble() - 0.5) * 1.0;
         dp.value.append(value);
         result.append(dp);
     }

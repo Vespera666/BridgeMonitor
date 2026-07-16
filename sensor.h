@@ -5,19 +5,19 @@
 #include <QString>
 #include "DataPoint.h"
 
-class MonitoringPoint;  // 前置声明，避免循环 include
+class MonitoringPoint; // 前置声明，避免循环 include
 
 class Sensor
 {
 public:
-    QString name;                               // 设备名，如 "风速风向仪"
-    QString size;                               // 规格
-    QString model;                              // 型号
-    QString manufacturer;                       // 厂家
-    QDate generDate;                            // 生产日期
-    int frequency;                              // 采集频率
-    bool isWorking = true;                      // 是否完好
-    MonitoringPoint *boundPoint = nullptr;      // 绑定到的监测点
+    QString name;                          // 设备名，如 "风速风向仪"
+    QString size;                          // 规格
+    QString model;                         // 型号
+    QString manufacturer;                  // 厂家
+    QDate generDate;                       // 生产日期
+    int frequency;                         // 采集频率
+    bool isWorking = true;                 // 是否完好
+    MonitoringPoint *boundPoint = nullptr; // 绑定到的监测点
 
     virtual QString sensorType() const = 0;     // 返回传感器类型名
     virtual QStringList fieldNames() const = 0; // 返回字段名列表

@@ -1,13 +1,10 @@
 #include "temperaturehumiditysensor.h"
-#include "filemanager.h"
 #include <QDateTime>
 #include <QRandomGenerator>
 #include <QtMath>
+#include "filemanager.h"
 
-TemperatureHumiditySensor::TemperatureHumiditySensor()
-{
-
-}
+TemperatureHumiditySensor::TemperatureHumiditySensor() {}
 QString TemperatureHumiditySensor::sensorType() const
 {
     return "温湿度监测传感器";
@@ -32,10 +29,9 @@ QVector<DataPoint> TemperatureHumiditySensor::generateMockData(int count)
 {
     QVector<DataPoint> dataList;
     QDateTime baseTime = QDateTime::currentDateTime();
-    QRandomGenerator* rng = QRandomGenerator::global();
+    QRandomGenerator *rng = QRandomGenerator::global();
 
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
         DataPoint dp;
         dp.timeStamp = baseTime.addSecs(i * this->frequency);
 

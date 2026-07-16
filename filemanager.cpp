@@ -7,8 +7,7 @@ FileManager::FileManager() {}
 
 /* 读 CSV 文件，返回 DataPoint 列表。
    fieldNames 用于校验列数（不含时间列），列数不匹配的行跳过并打印警告。 */
-QVector<DataPoint> FileManager::readCsv(const QString &filePath,
-                                        const QStringList &fieldNames)
+QVector<DataPoint> FileManager::readCsv(const QString &filePath, const QStringList &fieldNames)
 {
     QVector<DataPoint> result;
 

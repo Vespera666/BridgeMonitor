@@ -36,6 +36,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         expansionjointsensor.h expansionjointsensor.cpp
         deflection.cpp deflection.h displacement.cpp displacement.h
         resource.qrc
+        SensorManageDialog.h
+        SensorEditDialog.h
+        SensorEditDialog.cpp
+        SensorManageDialog.cpp
 
 
     )

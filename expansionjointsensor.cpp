@@ -1,13 +1,10 @@
 #include "expansionjointsensor.h"
-#include "filemanager.h"
 #include <QDateTime>
 #include <QRandomGenerator>
 #include <QtMath>
+#include "filemanager.h"
 
-ExpansionJointSensor::ExpansionJointSensor()
-{
-
-}
+ExpansionJointSensor::ExpansionJointSensor() {}
 
 QString ExpansionJointSensor::sensorType() const
 {
@@ -33,16 +30,17 @@ QVector<DataPoint> ExpansionJointSensor::generateMockData(int count)
 {
     QVector<DataPoint> dataList;
     QDateTime baseTime = QDateTime::currentDateTime();
-    QRandomGenerator* rng = QRandomGenerator::global();
+    QRandomGenerator *rng = QRandomGenerator::global();
 
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
         DataPoint dp;
         dp.timeStamp = baseTime.addSecs(i * this->frequency);
 
         double expansion = 5.0 + 3.0 * qSin(i * 0.005) + (rng->generateDouble() - 0.5) * 0.5;
-        if (expansion < 0) expansion = 0;
-        if (expansion > 15) expansion = 15;
+        if (expansion < 0)
+            expansion = 0;
+        if (expansion > 15)
+            expansion = 15;
 
         dp.value.append(expansion);
         dataList.append(dp);

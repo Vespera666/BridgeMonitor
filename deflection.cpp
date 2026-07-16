@@ -6,12 +6,12 @@
 
 DeflectionSensor::DeflectionSensor()
 {
-    name         = QStringLiteral("挠度计");
-    size         = QStringLiteral("标准");
-    model        = QStringLiteral("DF-100");
+    name = QStringLiteral("挠度计");
+    size = QStringLiteral("标准");
+    model = QStringLiteral("DF-100");
     manufacturer = QStringLiteral("通用");
-    generDate    = QDate(2024, 1, 1);
-    frequency    = 1;
+    generDate = QDate(2024, 1, 1);
+    frequency = 1;
 }
 
 QString DeflectionSensor::sensorType() const
@@ -44,9 +44,8 @@ QVector<DataPoint> DeflectionSensor::generateMockData(int count)
         DataPoint dp;
         dp.timeStamp = base.addSecs(i * frequency);
         // 挠度范围 -50 ~ +50 mm，正弦波 + 噪声
-        double value = 35.0 * qSin(i * 0.12)
-                     + 15.0 * qSin(i * 0.04)
-                     + (rng->generateDouble() - 0.5) * 8.0;
+        double value = 35.0 * qSin(i * 0.12) + 15.0 * qSin(i * 0.04)
+                       + (rng->generateDouble() - 0.5) * 8.0;
         dp.value.append(value);
         result.append(dp);
     }

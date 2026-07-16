@@ -12,8 +12,7 @@ public:
     FileManager();
 
     // 读写 CSV
-    static QVector<DataPoint> readCsv(const QString &filePath,
-                                      const QStringList &fieldNames);
+    static QVector<DataPoint> readCsv(const QString &filePath, const QStringList &fieldNames);
 
     static bool writeCsv(const QString &filePath,
                          const QStringList &fieldNames,

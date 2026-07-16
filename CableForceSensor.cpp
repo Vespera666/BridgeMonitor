@@ -1,12 +1,9 @@
 #include "CableForceSensor.h"
-#include "filemanager.h"
 #include <QDateTime>
 #include <QRandomGenerator>
+#include "filemanager.h"
 
-CableForceSensor::CableForceSensor()
-{
-
-}
+CableForceSensor::CableForceSensor() {}
 
 QString CableForceSensor::sensorType() const
 {
@@ -33,8 +30,7 @@ QVector<DataPoint> CableForceSensor::generateMockData(int count)
     QVector<DataPoint> dataList;
     QDateTime baseTime = QDateTime::currentDateTime();
 
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
         DataPoint dp;
         dp.timeStamp = baseTime.addSecs(i);
         // 修复bounded歧义问题

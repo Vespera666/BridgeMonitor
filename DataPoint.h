@@ -1,8 +1,6 @@
 #ifndef DATAPOINT_H
 #define DATAPOINT_H
 
-
-
 #include <QDateTime>
 #include <QVector>
 
