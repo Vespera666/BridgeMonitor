@@ -5,27 +5,22 @@ QString MonitoringPoint::displayName() const
     return sectionName + " - " + pointId;
 }
 
-bool MonitoringPoint::hasSensorType(const QString &type) const
+QString MonitoringPoint::sensorType() const
 {
-    for (const Sensor *s : sensors) {
-        if (s->sensorType() == type)
-            return true;
-    }
-    return false;
+    return sensor ? sensor->sensorType() : QString();
 }
 
-void MonitoringPoint::addSensor(Sensor *s)
+void MonitoringPoint::bindSensor(Sensor *s)
 {
-    sensors.append(s);
+    sensor = s;
 }
 
-void MonitoringPoint::removeSensor(int index)
+void MonitoringPoint::unbindSensor()
 {
-    if (index >= 0 && index < sensors.size())
-        sensors.removeAt(index);
+    sensor = nullptr;
 }
 
-int MonitoringPoint::sensorCount() const
+bool MonitoringPoint::hasSensor() const
 {
-    return sensors.size();
+    return sensor != nullptr;
 }
