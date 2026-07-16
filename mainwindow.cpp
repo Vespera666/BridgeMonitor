@@ -12,3 +12,28 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+
+void MainWindow::on_monitorBtn_clicked()
+{
+
+}
+
+
+void MainWindow::on_sensorBtn_clicked()
+{
+
+}
+
+
+void MainWindow::on_historydataBtn_clicked()
+{
+
+}
+
+
+void MainWindow::on_currentdataBtn_clicked()
+{
+
+}
+

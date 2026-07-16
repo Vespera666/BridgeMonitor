@@ -17,6 +17,16 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+private slots:
+
+    void on_monitorBtn_clicked();
+
+    void on_sensorBtn_clicked();
+
+    void on_historydataBtn_clicked();
+
+    void on_currentdataBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
