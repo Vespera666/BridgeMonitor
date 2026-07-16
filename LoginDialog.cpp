@@ -3,11 +3,12 @@
 #include "UserManager.h"
 
 #include <QFormLayout>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 
 LoginDialog::LoginDialog(UserManager *um, QWidget *parent)
-    : QDialog(parent), m_userManager(um)
+    : QDialog(parent)
+    , m_userManager(um)
 {
     setWindowTitle(QStringLiteral("用户登录"));
     setFixedSize(320, 220);
@@ -25,8 +26,8 @@ LoginDialog::LoginDialog(UserManager *um, QWidget *parent)
     m_errorLabel->hide();
 
     auto *registerBtn = new QPushButton(QStringLiteral("注册"), this);
-    auto *loginBtn    = new QPushButton(QStringLiteral("登录"), this);
-    auto *cancelBtn   = new QPushButton(QStringLiteral("退出"), this);
+    auto *loginBtn = new QPushButton(QStringLiteral("登录"), this);
+    auto *cancelBtn = new QPushButton(QStringLiteral("退出"), this);
 
     // ── 表单 ──
     auto *formLayout = new QFormLayout;
@@ -47,16 +48,16 @@ LoginDialog::LoginDialog(UserManager *um, QWidget *parent)
     mainLayout->addLayout(btnLayout);
 
     // ── 信号 ──
-    connect(loginBtn,    &QPushButton::clicked, this, &LoginDialog::onLoginClicked);
+    connect(loginBtn, &QPushButton::clicked, this, &LoginDialog::onLoginClicked);
     connect(registerBtn, &QPushButton::clicked, this, &LoginDialog::onRegisterClicked);
-    connect(cancelBtn,   &QPushButton::clicked, this, &QDialog::reject);
+    connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
     connect(m_passwordEdit, &QLineEdit::returnPressed, this, &LoginDialog::onLoginClicked);
 }
 
 void LoginDialog::onLoginClicked()
 {
     QString user = m_usernameEdit->text().trimmed();
-    QString pwd  = m_passwordEdit->text();
+    QString pwd = m_passwordEdit->text();
 
     if (user.isEmpty() || pwd.isEmpty()) {
         m_errorLabel->setText(QStringLiteral("用户名和密码不能为空"));
@@ -79,7 +80,7 @@ void LoginDialog::onLoginClicked()
 void LoginDialog::onRegisterClicked()
 {
     RegisterDialog dlg(m_userManager, this);
-    dlg.exec();  // 注册弹窗，用户注册完自动关闭
+    dlg.exec(); // 注册弹窗，用户注册完自动关闭
 }
 
 QString LoginDialog::loggedUsername() const

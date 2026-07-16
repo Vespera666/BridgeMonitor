@@ -1,17 +1,18 @@
 #include "SensorEditDialog.h"
-#include "windsensor.h"
-#include "VibrationSensor.h"
 #include "CableForceSensor.h"
+#include "VibrationSensor.h"
 #include "deflection.h"
 #include "displacement.h"
 #include "expansionjointsensor.h"
 #include "temperaturehumiditysensor.h"
-SensorEditDialog::SensorEditDialog(QWidget *parent) : QDialog(parent)
+#include "windsensor.h"
+SensorEditDialog::SensorEditDialog(QWidget *parent)
+    : QDialog(parent)
 {
     this->setWindowTitle("传感器信息编辑");
     this->setFixedSize(540, 380);
 
-    QFormLayout* form = new QFormLayout();
+    QFormLayout *form = new QFormLayout();
     form->setSpacing(12);
 
     m_leName = new QLineEdit;
@@ -22,15 +23,13 @@ SensorEditDialog::SensorEditDialog(QWidget *parent) : QDialog(parent)
     m_deProduce->setDisplayFormat("yyyy-MM-dd");
     m_leFreq = new QLineEdit;
     m_cmbType = new QComboBox;
-    m_cmbType->addItems({
-        "风速风向传感器",
-        "振动监测传感器",
-        "索力监测传感器",
-        "挠度传感器",
-        "支座位移传感器",
-        "伸缩缝监测传感器",
-        "温湿度监测传感器"
-    });
+    m_cmbType->addItems({"风速风向传感器",
+                         "振动监测传感器",
+                         "索力监测传感器",
+                         "挠度传感器",
+                         "支座位移传感器",
+                         "伸缩缝监测传感器",
+                         "温湿度监测传感器"});
 
     form->addRow("设备名称：", m_leName);
     form->addRow("规格：", m_leSize);
@@ -40,18 +39,18 @@ SensorEditDialog::SensorEditDialog(QWidget *parent) : QDialog(parent)
     form->addRow("采集频率(秒)：", m_leFreq);
     form->addRow("传感器类型：", m_cmbType);
 
-    QPushButton* btnOk = new QPushButton("确认保存");
-    QPushButton* btnCancel = new QPushButton("取消");
-    QHBoxLayout* btnLayout = new QHBoxLayout();
+    QPushButton *btnOk = new QPushButton("确认保存");
+    QPushButton *btnCancel = new QPushButton("取消");
+    QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->addStretch();
     btnLayout->addWidget(btnOk);
     btnLayout->addWidget(btnCancel);
 
-    QVBoxLayout* main = new QVBoxLayout(this);
+    QVBoxLayout *main = new QVBoxLayout(this);
     main->addLayout(form);
     main->addSpacing(20);
     main->addLayout(btnLayout);
-    main->setContentsMargins(30,30,30,30);
+    main->setContentsMargins(30, 30, 30, 30);
 
     connect(btnOk, &QPushButton::clicked, this, &SensorEditDialog::slotConfirm);
     connect(btnCancel, &QPushButton::clicked, this, &SensorEditDialog::slotCancel);
@@ -74,15 +73,23 @@ void SensorEditDialog::setEditTarget(Sensor *srcSensor)
 Sensor *SensorEditDialog::getNewSensor()
 {
     QString type = m_cmbType->currentText();
-    Sensor* s = nullptr;
-    if(type == "风速风向传感器") s = new WindSensor();
-    else if(type == "振动监测传感器") s = new VibrationSensor();
-    else if(type == "索力监测传感器") s = new CableForceSensor();
-    else if(type == "挠度传感器") s = new DeflectionSensor();
-    else if(type == "支座位移传感器") s = new DisplacementSensor();
-    else if(type == "伸缩缝监测传感器") s = new ExpansionJointSensor();
-    else if(type == "温湿度监测传感器") s = new TemperatureHumiditySensor();
-    else s = new WindSensor();
+    Sensor *s = nullptr;
+    if (type == "风速风向传感器")
+        s = new WindSensor();
+    else if (type == "振动监测传感器")
+        s = new VibrationSensor();
+    else if (type == "索力监测传感器")
+        s = new CableForceSensor();
+    else if (type == "挠度传感器")
+        s = new DeflectionSensor();
+    else if (type == "支座位移传感器")
+        s = new DisplacementSensor();
+    else if (type == "伸缩缝监测传感器")
+        s = new ExpansionJointSensor();
+    else if (type == "温湿度监测传感器")
+        s = new TemperatureHumiditySensor();
+    else
+        s = new WindSensor();
 
     s->name = m_leName->text().trimmed();
     s->size = m_leSize->text().trimmed();
@@ -105,13 +112,11 @@ void SensorEditDialog::slotConfirm()
     QString name = m_leName->text().trimmed();
     QString model = m_leModel->text().trimmed();
     QString freqStr = m_leFreq->text().trimmed();
-    if(name.isEmpty() || model.isEmpty() || freqStr.isEmpty())
-    {
+    if (name.isEmpty() || model.isEmpty() || freqStr.isEmpty()) {
         QMessageBox::warning(this, "输入校验", "设备名称、型号、采集频率不能为空！");
         return;
     }
-    if(freqStr.toInt() <= 0)
-    {
+    if (freqStr.toInt() <= 0) {
         QMessageBox::warning(this, "输入校验", "采集频率必须为正整数！");
         return;
     }

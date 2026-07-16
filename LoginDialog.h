@@ -2,8 +2,8 @@
 #define LOGINDIALOG_H
 
 #include <QDialog>
-#include <QLineEdit>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 
 class UserManager;
@@ -16,7 +16,7 @@ public:
 
     // 登录成功后可获取用户信息
     QString loggedUsername() const;
-    QString loggedRole()     const;
+    QString loggedRole() const;
 
 private slots:
     void onLoginClicked();
@@ -24,9 +24,9 @@ private slots:
 
 private:
     UserManager *m_userManager;
-    QLineEdit   *m_usernameEdit;
-    QLineEdit   *m_passwordEdit;
-    QLabel      *m_errorLabel;
+    QLineEdit *m_usernameEdit;
+    QLineEdit *m_passwordEdit;
+    QLabel *m_errorLabel;
 
     QString m_loggedUser;
     QString m_loggedRole;

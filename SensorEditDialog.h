@@ -1,16 +1,15 @@
 #ifndef SENSOREDITDIALOG_H
 #define SENSOREDITDIALOG_H
-#include <QDialog>
-#include <QLineEdit>
 #include <QComboBox>
 #include <QDateEdit>
-#include <QPushButton>
+#include <QDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
+#include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QVBoxLayout>
 #include "sensor.h"
-
 
 class SensorEditDialog : public QDialog
 {
@@ -18,8 +17,8 @@ class SensorEditDialog : public QDialog
 public:
     explicit SensorEditDialog(QWidget *parent = nullptr);
     ~SensorEditDialog() override = default;
-    void setEditTarget(Sensor* srcSensor);
-    Sensor* getNewSensor();
+    void setEditTarget(Sensor *srcSensor);
+    Sensor *getNewSensor();
     QString getInputModel() const;
 
 private slots:
@@ -27,14 +26,14 @@ private slots:
     void slotCancel();
 
 private:
-    QLineEdit* m_leName;
-    QLineEdit* m_leSize;
-    QLineEdit* m_leModel;
-    QLineEdit* m_leManufacturer;
-    QDateEdit* m_deProduce;
-    QLineEdit* m_leFreq;
-    QComboBox* m_cmbType;
+    QLineEdit *m_leName;
+    QLineEdit *m_leSize;
+    QLineEdit *m_leModel;
+    QLineEdit *m_leManufacturer;
+    QDateEdit *m_deProduce;
+    QLineEdit *m_leFreq;
+    QComboBox *m_cmbType;
     bool m_isAddMode = true;
-    Sensor* m_oldSensor = nullptr;
+    Sensor *m_oldSensor = nullptr;
 };
 #endif // SENSOREDITDIALOG_H

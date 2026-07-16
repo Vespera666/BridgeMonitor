@@ -1,6 +1,6 @@
-#include "mainwindow.h"
 #include "LoginDialog.h"
 #include "UserManager.h"
+#include "mainwindow.h"
 
 #include <QApplication>
 
@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     // UI 层：登录
     LoginDialog dlg(&userManager);
     if (dlg.exec() != QDialog::Accepted)
-        return 0;  // 退出
+        return 0; // 退出
 
     // 登录成功，传身份进主窗口
     MainWindow w(dlg.loggedUsername(), dlg.loggedRole(), &userManager);

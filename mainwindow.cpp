@@ -1,14 +1,17 @@
 #include "mainwindow.h"
-#include "./ui_mainwindow.h"
-#include "SensorManageDialog.h"
-#include "AccountManageDialog.h"
-#include "UserManager.h"
-#include"MonitorPointManageDialog.h"
 #include <QHeaderView>
+#include "./ui_mainwindow.h"
+#include "AccountManageDialog.h"
+#include "HistoryDataDialog.h"
+#include "MonitorPointManageDialog.h"
+#include "RealTimeDataDialog.h"
+#include "SensorManageDialog.h"
+#include "UserManager.h"
 
-
-MainWindow::MainWindow(const QString &username, const QString &role,
-                       UserManager *userManager, QWidget *parent)
+MainWindow::MainWindow(const QString &username,
+                       const QString &role,
+                       UserManager *userManager,
+                       QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , m_username(username)
@@ -18,8 +21,8 @@ MainWindow::MainWindow(const QString &username, const QString &role,
     ui->setupUi(this);
 
     // 窗口标题显示当前用户
-    setWindowTitle(QStringLiteral("万州三桥桥梁监测系统  —  当前用户：%1 (%2)")
-                   .arg(m_username, m_role));
+    setWindowTitle(
+        QStringLiteral("万州三桥桥梁监测系统  —  当前用户：%1 (%2)").arg(m_username, m_role));
 
     applyPermissions();
 }
@@ -35,14 +38,23 @@ void MainWindow::on_monitorBtn_clicked()
     dlg.exec();
 }
 
-void MainWindow::on_sensorBtn_clicked() {
+void MainWindow::on_sensorBtn_clicked()
+{
     SensorManageDialog dlg(this);
     dlg.exec();
 }
 
-void MainWindow::on_historydataBtn_clicked() {}
+void MainWindow::on_historydataBtn_clicked()
+{
+    HistoryDataDialog dlg(this);
+    dlg.exec();
+}
 
-void MainWindow::on_currentdataBtn_clicked() {}
+void MainWindow::on_currentdataBtn_clicked()
+{
+    RealTimeDataDialog dlg(this);
+    dlg.exec();
+}
 
 void MainWindow::applyPermissions()
 {
@@ -64,4 +76,3 @@ void MainWindow::on_accountBtn_clicked()
     AccountManageDialog dlg(m_userManager, this);
     dlg.exec();
 }
-

@@ -6,9 +6,10 @@
 #include <QStringList>
 
 // 一条用户记录：密码 + 角色
-struct UserInfo {
+struct UserInfo
+{
     QString password;
-    QString role;  // "admin" / "engineer" / "analyst"
+    QString role; // "admin" / "engineer" / "analyst"
 };
 
 class UserManager
@@ -27,7 +28,7 @@ public:
 
     // 管理员功能：获取全部用户列表（用于显示）
     QStringList allUsernames() const;
-    QString     roleOfUser(const QString &username) const;
+    QString roleOfUser(const QString &username) const;
 
     // 管理员功能：删除用户，不能删除自己
     bool deleteUser(const QString &username);
@@ -40,7 +41,7 @@ private:
     void save();
 
     QString m_filePath;
-    QMap<QString, UserInfo> m_users;  // key=用户名, value=UserInfo
+    QMap<QString, UserInfo> m_users; // key=用户名, value=UserInfo
 };
 
 #endif // USERMANAGER_H

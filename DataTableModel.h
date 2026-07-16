@@ -24,16 +24,15 @@ public:
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
     // 返回 (row, col) 单元格的内容。role 用来区分"显示文字"还是"对齐方式"等
-    QVariant data(const QModelIndex &index,
-                  int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     // ── 表头（列名）──
-    QVariant headerData(int section, Qt::Orientation orientation,
+    QVariant headerData(int section,
+                        Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const override;
 
     // ── 加载/替换全部数据 ──
-    void loadData(const QVector<DataPoint> &records,
-                  const QStringList &headerLabels);
+    void loadData(const QVector<DataPoint> &records, const QStringList &headerLabels);
 
 private:
     QVector<DataPoint> m_data;

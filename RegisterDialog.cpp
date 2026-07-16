@@ -2,12 +2,13 @@
 #include "UserManager.h"
 
 #include <QFormLayout>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QVBoxLayout>
 
 RegisterDialog::RegisterDialog(UserManager *um, QWidget *parent)
-    : QDialog(parent), m_userManager(um)
+    : QDialog(parent)
+    , m_userManager(um)
 {
     setWindowTitle(QStringLiteral("注册新用户"));
     setFixedSize(320, 230);
@@ -27,12 +28,12 @@ RegisterDialog::RegisterDialog(UserManager *um, QWidget *parent)
     m_errorLabel->setStyleSheet("color: red;");
     m_errorLabel->hide();
 
-    auto *okBtn     = new QPushButton(QStringLiteral("确认注册"), this);
-    auto *cancelBtn = new QPushButton(QStringLiteral("取消"),     this);
+    auto *okBtn = new QPushButton(QStringLiteral("确认注册"), this);
+    auto *cancelBtn = new QPushButton(QStringLiteral("取消"), this);
 
     auto *formLayout = new QFormLayout;
-    formLayout->addRow(QStringLiteral("用户名："),   m_usernameEdit);
-    formLayout->addRow(QStringLiteral("密  码："),   m_passwordEdit);
+    formLayout->addRow(QStringLiteral("用户名："), m_usernameEdit);
+    formLayout->addRow(QStringLiteral("密  码："), m_passwordEdit);
     formLayout->addRow(QStringLiteral("确认密码："), m_confirmEdit);
 
     auto *btnLayout = new QHBoxLayout;
@@ -45,7 +46,7 @@ RegisterDialog::RegisterDialog(UserManager *um, QWidget *parent)
     mainLayout->addWidget(m_errorLabel);
     mainLayout->addLayout(btnLayout);
 
-    connect(okBtn,     &QPushButton::clicked, this, &RegisterDialog::onRegisterClicked);
+    connect(okBtn, &QPushButton::clicked, this, &RegisterDialog::onRegisterClicked);
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
     connect(m_confirmEdit, &QLineEdit::returnPressed, this, &RegisterDialog::onRegisterClicked);
 }
@@ -53,8 +54,8 @@ RegisterDialog::RegisterDialog(UserManager *um, QWidget *parent)
 void RegisterDialog::onRegisterClicked()
 {
     QString user = m_usernameEdit->text().trimmed();
-    QString pwd  = m_passwordEdit->text();
-    QString cfm  = m_confirmEdit->text();
+    QString pwd = m_passwordEdit->text();
+    QString cfm = m_confirmEdit->text();
 
     if (user.isEmpty() || pwd.isEmpty()) {
         m_errorLabel->setText(QStringLiteral("用户名和密码不能为空"));
@@ -74,5 +75,5 @@ void RegisterDialog::onRegisterClicked()
         return;
     }
 
-    accept();  // 注册成功
+    accept(); // 注册成功
 }

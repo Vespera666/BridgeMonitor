@@ -2,7 +2,8 @@
 #include "ui_monitorpointdialog.h"
 
 MonitorPointDialog::MonitorPointDialog(QWidget *parent)
-    : QDialog(parent), ui(new Ui::MonitorPointDialog)
+    : QDialog(parent)
+    , ui(new Ui::MonitorPointDialog)
 {
     ui->setupUi(this);
 }

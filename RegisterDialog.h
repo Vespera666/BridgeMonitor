@@ -2,8 +2,8 @@
 #define REGISTERDIALOG_H
 
 #include <QDialog>
-#include <QLineEdit>
 #include <QLabel>
+#include <QLineEdit>
 
 class UserManager;
 
@@ -18,10 +18,10 @@ private slots:
 
 private:
     UserManager *m_userManager;
-    QLineEdit   *m_usernameEdit;
-    QLineEdit   *m_passwordEdit;
-    QLineEdit   *m_confirmEdit;
-    QLabel      *m_errorLabel;
+    QLineEdit *m_usernameEdit;
+    QLineEdit *m_passwordEdit;
+    QLineEdit *m_confirmEdit;
+    QLabel *m_errorLabel;
 };
 
 #endif // REGISTERDIALOG_H

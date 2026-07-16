@@ -2,8 +2,7 @@
 
 DataTableModel::DataTableModel(QObject *parent)
     : QAbstractTableModel(parent)
-{
-}
+{}
 
 // ---------------------------------------------------------------------------
 // rowCount — "你有几行？"
@@ -61,7 +60,7 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
         // 第 1 列及以后：数值 → 保留合适小数位
         int valueIdx = index.column() - 1;
         if (valueIdx < dp.value.size())
-            return QString::number(dp.value.at(valueIdx), 'f', 2);  // 2 位小数
+            return QString::number(dp.value.at(valueIdx), 'f', 2); // 2 位小数
 
         return {};
     }
@@ -75,7 +74,7 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
             return int(Qt::AlignRight | Qt::AlignVCenter);
     }
 
-    return {};  // 其他 role 不处理
+    return {}; // 其他 role 不处理
 }
 
 // ---------------------------------------------------------------------------
@@ -83,8 +82,7 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
 //
 // orientation: Horizontal = 列标题, Vertical = 行号
 // ---------------------------------------------------------------------------
-QVariant DataTableModel::headerData(int section, Qt::Orientation orientation,
-                                    int role) const
+QVariant DataTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     // 只要列标题（横向表头），行号用默认（1, 2, 3...）
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
@@ -100,11 +98,10 @@ QVariant DataTableModel::headerData(int section, Qt::Orientation orientation,
 // "数据要全换了，你准备好重建整个视图" / "换完了，你刷新吧"
 // 不写这两个的话，QTableView 不知道数据变了，界面不会更新。
 // ---------------------------------------------------------------------------
-void DataTableModel::loadData(const QVector<DataPoint> &records,
-                              const QStringList &headerLabels)
+void DataTableModel::loadData(const QVector<DataPoint> &records, const QStringList &headerLabels)
 {
     beginResetModel();
-    m_data    = records;
+    m_data = records;
     m_headers = headerLabels;
     endResetModel();
 }
