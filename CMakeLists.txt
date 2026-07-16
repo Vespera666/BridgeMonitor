@@ -35,6 +35,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         temperaturehumiditysensor.h temperaturehumiditysensor.cpp
         expansionjointsensor.h expansionjointsensor.cpp
         deflection.cpp deflection.h displacement.cpp displacement.h
+        UserManager.h UserManager.cpp
+        LoginDialog.h LoginDialog.cpp
+        RegisterDialog.h RegisterDialog.cpp
+        AccountManageDialog.h AccountManageDialog.cpp
         resource.qrc
         SensorManageDialog.h
         SensorEditDialog.h

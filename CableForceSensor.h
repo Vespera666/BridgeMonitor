@@ -13,6 +13,7 @@ public:
     QStringList fieldUnits() const override;
     QVector<DataPoint> loadFile(const QString &filePath) override;
     QVector<DataPoint> generateMockData(int count) override;
+
 };
 
 #endif // CABLEFORCESENSOR_H
