@@ -6,7 +6,6 @@
 #include "displacement.h"
 #include "expansionjointsensor.h"
 #include "temperaturehumiditysensor.h"
-
 SensorManageDialog::SensorManageDialog(QWidget *parent)
     : QDialog(parent)
 {
@@ -17,17 +16,14 @@ SensorManageDialog::SensorManageDialog(QWidget *parent)
     refreshTable();
     refreshCombo();
 }
-
 SensorManageDialog::~SensorManageDialog()
 {
 }
-
 void SensorManageDialog::initUI()
 {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setSpacing(12);
     mainLayout->setContentsMargins(15,15,15,15);
-
     // 顶部按钮栏
     QHBoxLayout* btnLayout = new QHBoxLayout();
     QPushButton* btnAdd = new QPushButton("新增传感器");
@@ -39,7 +35,6 @@ void SensorManageDialog::initUI()
     btnLayout->addWidget(btnDel);
     btnLayout->addWidget(btnRefresh);
     btnLayout->addStretch();
-
     // 表格
     m_tableModel = new QStandardItemModel(this);
     m_tableModel->setHorizontalHeaderLabels(m_sensorHeader);
@@ -48,7 +43,6 @@ void SensorManageDialog::initUI()
     m_tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableView->horizontalHeader()->setStretchLastSection(true);
-
     // 底部绑定模块
     QGroupBox* groupBind = new QGroupBox("传感器-监测点绑定");
     QHBoxLayout* bindLayout = new QHBoxLayout(groupBind);
@@ -63,12 +57,10 @@ void SensorManageDialog::initUI()
     bindLayout->addWidget(btnBind);
     bindLayout->addWidget(btnUnbind);
     groupBind->setMaximumHeight(90);
-
     // 组装布局
     mainLayout->addLayout(btnLayout);
     mainLayout->addWidget(m_tableView);
     mainLayout->addWidget(groupBind);
-
     // 信号绑定
     connect(btnAdd, &QPushButton::clicked, this, &SensorManageDialog::slotAdd);
     connect(btnEdit, &QPushButton::clicked, this, &SensorManageDialog::slotEdit);
@@ -77,7 +69,6 @@ void SensorManageDialog::initUI()
     connect(btnBind, &QPushButton::clicked, this, &SensorManageDialog::bindPoint);
     connect(btnUnbind, &QPushButton::clicked, this, &SensorManageDialog::unBindPoint);
 }
-
 void SensorManageDialog::initFile()
 {
     // 传感器文件
@@ -103,12 +94,10 @@ void SensorManageDialog::initFile()
     if(!bindF.exists())
         bindF.open(QIODevice::WriteOnly|QIODevice::Text);
 }
-
 void SensorManageDialog::clearTable()
 {
     m_tableModel->removeRows(0, m_tableModel->rowCount());
 }
-
 void SensorManageDialog::refreshTable()
 {
     clearTable();
@@ -130,7 +119,6 @@ void SensorManageDialog::refreshTable()
     }
     refreshCombo();
 }
-
 void SensorManageDialog::refreshCombo()
 {
     m_cmbSensorSel->clear();
@@ -145,7 +133,6 @@ void SensorManageDialog::refreshCombo()
     for(auto mp : mpList)
         m_cmbMonitorSel->addItem(mp.displayName());
 }
-
 QVector<Sensor*> SensorManageDialog::loadAllSensor()
 {
     QVector<Sensor*> res;
@@ -183,7 +170,6 @@ QVector<Sensor*> SensorManageDialog::loadAllSensor()
     f.close();
     return res;
 }
-
 bool SensorManageDialog::saveSensor(Sensor *s, bool isUpdate)
 {
     QFile f(SENSOR_FILE);
@@ -218,7 +204,6 @@ bool SensorManageDialog::saveSensor(Sensor *s, bool isUpdate)
     f.close();
     return true;
 }
-
 bool SensorManageDialog::delSensorByModel(const QString &model)
 {
     QFile f(SENSOR_FILE);
@@ -263,7 +248,6 @@ bool SensorManageDialog::delSensorByModel(const QString &model)
     f.close();
     return true;
 }
-
 QString SensorManageDialog::getBindPoint(const QString &sensorModel)
 {
     QFile f(BIND_FILE);
@@ -282,7 +266,6 @@ QString SensorManageDialog::getBindPoint(const QString &sensorModel)
     f.close();
     return "";
 }
-
 QVector<MonitoringPoint> SensorManageDialog::loadAllMonitor()
 {
     QVector<MonitoringPoint> res;
@@ -307,7 +290,28 @@ QVector<MonitoringPoint> SensorManageDialog::loadAllMonitor()
     f.close();
     return res;
 }
-
+// 新增：判断监测点是否已绑定任意传感器
+bool SensorManageDialog::isPointHasBind(const QString& monId)
+{
+    QFile f(BIND_FILE);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+    QTextStream st(&f);
+    while (!st.atEnd())
+    {
+        QString line = st.readLine().trimmed();
+        QStringList cols = line.split(",", Qt::KeepEmptyParts);
+        // bind文件格式：传感器型号,监测点编号
+        if (cols.size() >= 2 && cols[1] == monId)
+        {
+            f.close();
+            return true;
+        }
+    }
+    f.close();
+    return false;
+}
+// 修改后的绑定函数：增加监测点绑定校验
 void SensorManageDialog::bindPoint()
 {
     int senIdx = m_cmbSensorSel->currentIndex();
@@ -319,6 +323,16 @@ void SensorManageDialog::bindPoint()
     }
     QString senModel = m_cmbSensorSel->currentText().split(" | ").first();
     QString monId = m_cmbMonitorSel->currentText().split(" - ").last();
+
+    // 核心校验：监测点已绑定则警告，直接终止绑定
+    if(isPointHasBind(monId))
+    {
+        QMessageBox::warning(this, "绑定失败",
+                             QString("监测点【%1】已绑定传感器，一个监测点仅允许绑定一个传感器，请先解绑后再操作！").arg(monId));
+        return;
+    }
+
+    // 原有绑定逻辑不变
     QFile f(BIND_FILE);
     f.open(QIODevice::ReadOnly|QIODevice::Text);
     QString all = f.readAll();
@@ -339,7 +353,6 @@ void SensorManageDialog::bindPoint()
     refreshTable();
     QMessageBox::information(this,"绑定成功","已完成绑定");
 }
-
 void SensorManageDialog::unBindPoint()
 {
     int senIdx = m_cmbSensorSel->currentIndex();
@@ -364,7 +377,6 @@ void SensorManageDialog::unBindPoint()
     refreshTable();
     QMessageBox::information(this,"解绑完成","已解除关联");
 }
-
 void SensorManageDialog::slotAdd()
 {
     SensorEditDialog dlg(this);
@@ -377,7 +389,6 @@ void SensorManageDialog::slotAdd()
         refreshTable();
     }
 }
-
 void SensorManageDialog::slotEdit()
 {
     QModelIndexList sel = m_tableView->selectionModel()->selectedRows();
@@ -394,7 +405,6 @@ void SensorManageDialog::slotEdit()
     QDate prod = QDate::fromString(m_tableModel->item(row,4)->text(), "yyyy-MM-dd");
     int freq = m_tableModel->item(row,5)->text().toInt();
     QString type = m_tableModel->item(row,6)->text();
-
     Sensor* temp;
     if(type == "风速风向传感器") temp = new WindSensor();
     else if(type == "振动监测传感器") temp = new VibrationSensor();
@@ -405,7 +415,6 @@ void SensorManageDialog::slotEdit()
     else temp = new TemperatureHumiditySensor();
     temp->name = name; temp->size = size; temp->model = model;
     temp->manufacturer = manu; temp->generDate = prod; temp->frequency = freq;
-
     SensorEditDialog dlg(this);
     dlg.setEditTarget(temp);
     if(dlg.exec() == QDialog::Accepted)
@@ -417,7 +426,6 @@ void SensorManageDialog::slotEdit()
     delete temp;
     refreshTable();
 }
-
 void SensorManageDialog::slotDel()
 {
     QString target = QInputDialog::getText(this,"删除传感器","输入传感器型号：");
@@ -438,7 +446,6 @@ void SensorManageDialog::slotDel()
         QMessageBox::information(this,"完成","删除成功");
     }
 }
-
 void SensorManageDialog::slotRefresh()
 {
     refreshTable();

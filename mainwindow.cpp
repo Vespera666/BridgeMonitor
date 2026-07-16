@@ -3,6 +3,9 @@
 #include "SensorManageDialog.h"
 #include "AccountManageDialog.h"
 #include "UserManager.h"
+#include"MonitorPointManageDialog.h"
+#include <QHeaderView>
+
 
 MainWindow::MainWindow(const QString &username, const QString &role,
                        UserManager *userManager, QWidget *parent)
@@ -26,7 +29,11 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_monitorBtn_clicked() {}
+void MainWindow::on_monitorBtn_clicked()
+{
+    MonitorPointManageDialog dlg(this);
+    dlg.exec();
+}
 
 void MainWindow::on_sensorBtn_clicked() {
     SensorManageDialog dlg(this);

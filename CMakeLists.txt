@@ -44,6 +44,13 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         SensorEditDialog.h
         SensorEditDialog.cpp
         SensorManageDialog.cpp
+        MonitorPointEditDialog.h
+        MonitorPointEditDialog.cpp
+        MonitorPointTableModel.h
+        MonitorPointTableModel.cpp
+        MonitorPointManageDialog.h
+        MonitorPointManageDialog.cpp
+
 
 
     )
