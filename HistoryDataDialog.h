@@ -11,10 +11,15 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSplitter>
 #include <QTableView>
 #include <QTextStream>
 #include <QVBoxLayout>
 #include <QVector>
+#include <QtCharts/QChartView>
+#include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QValueAxis>
 #include "DataPoint.h"
 #include "DataTableModel.h"
 #include "monitorpoint.h"
@@ -36,6 +41,8 @@ private:
     // UI 控件
     QTableView *m_tableView;
     DataTableModel *m_tableModel;
+    QChartView *m_chartView;
+    QSplitter *m_splitter;
 
     QComboBox *m_cbxMonitorPoint;
     QDateEdit *m_deStartDate;
@@ -51,9 +58,20 @@ private:
     QVector<MonitoringPoint> loadAllMonitorPoints();
     QString getBindSensorByPointId(const QString &pid);
     Sensor *loadSensorByModel(const QString &model);
-    QVector<DataPoint> loadHistoryData(Sensor *sensor,
-                                       const QDateTime &start,
-                                       const QDateTime &end);
+    // 尝试从 CSV 加载真实数据，失败则回退到模拟数据
+    QVector<DataPoint> loadRealOrMockData(Sensor *sensor,
+                                          const QString &pointId,
+                                          const QDateTime &start,
+                                          const QDateTime &end);
+    // 根据监测点编号查找拆分后的 CSV 文件路径
+    QString findCsvPath(const QString &pointId) const;
+    // 按日期范围过滤 DataPoint 列表
+    void filterByDateRange(QVector<DataPoint> &data,
+                           const QDateTime &start,
+                           const QDateTime &end) const;
+    // 绘制折线图
+    void updateChart(const QVector<DataPoint> &data,
+                     const QStringList &fieldNames);
 
 private slots:
     void slotQuery();
