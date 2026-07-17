@@ -75,6 +75,11 @@ else()
     endif()
 endif()
 
+# 自动将持久化文件复制到构建目录（团队成员 cmake 即生效）
+configure_file(${CMAKE_SOURCE_DIR}/monitor_storage.txt ${CMAKE_BINARY_DIR}/monitor_storage.txt COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/sensor_storage.txt   ${CMAKE_BINARY_DIR}/sensor_storage.txt   COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/bind_link.txt        ${CMAKE_BINARY_DIR}/bind_link.txt        COPYONLY)
+
 target_link_libraries(BridgeMonitor PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Charts)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
