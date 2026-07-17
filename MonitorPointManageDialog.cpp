@@ -153,6 +153,7 @@ QVector<MonitoringPoint> MonitorPointManageDialog::loadAllMonitorPoints()
         mp.pointId = cols[0];
         mp.sectionName = cols[1];
         mp.installDate = QDate::fromString(cols[2], "yyyy-MM-dd");
+        mp.dataType = (cols.size() >= 4) ? cols[3] : QString();
         mp.sensor = nullptr;
         res.append(mp);
     }
@@ -183,10 +184,11 @@ bool MonitorPointManageDialog::saveMonitorPoint(const MonitoringPoint &mp,
         }
         lines = newLines;
     }
-    QString newLine = QString("%1,%2,%3")
+    QString newLine = QString("%1,%2,%3,%4")
                           .arg(mp.pointId)
                           .arg(mp.sectionName)
-                          .arg(mp.installDate.toString("yyyy-MM-dd"));
+                          .arg(mp.installDate.toString("yyyy-MM-dd"))
+                          .arg(mp.dataType);
     for (int i = 0; i < lines.size(); i++)
         if (lines[i].trimmed().isEmpty())
             lines.removeAt(i--);
@@ -237,16 +239,25 @@ bool MonitorPointManageDialog::deletePointById(const QString &pointId)
 
 QString MonitorPointManageDialog::getBindSensorByPointId(const QString &pid)
 {
-    QFile f(BIND_FILE);
+    // 从 sensor_storage.txt 最后一列查找
+    QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return "";
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
+    bool skipHead = true;
     while (!st.atEnd()) {
         QString line = st.readLine().trimmed();
-        QStringList cols = line.split(",");
-        if (cols.size() >= 2 && cols[1] == pid) {
+        if (line.isEmpty())
+            continue;
+        if (skipHead) {
+            skipHead = false;
+            continue;
+        }
+        QStringList cols = line.split(",", Qt::KeepEmptyParts);
+        if (cols.size() >= 8 && cols[7] == pid) {
             f.close();
-            return cols[0];
+            return cols[2]; // 返回型号
         }
     }
     f.close();
@@ -280,14 +291,22 @@ QStringList MonitorPointManageDialog::loadAllSensorModel()
 // ====================== 一对一绑定函数实现 ======================
 bool MonitorPointManageDialog::isPointAlreadyBound(const QString &pointId)
 {
-    QFile f(BIND_FILE);
+    QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
+    bool skipHead = true;
     while (!st.atEnd()) {
         QString line = st.readLine().trimmed();
+        if (line.isEmpty())
+            continue;
+        if (skipHead) {
+            skipHead = false;
+            continue;
+        }
         QStringList cols = line.split(",", Qt::KeepEmptyParts);
-        if (cols.size() >= 2 && cols[1] == pointId) {
+        if (cols.size() >= 8 && cols[7] == pointId) {
             f.close();
             return true;
         }
@@ -298,7 +317,8 @@ bool MonitorPointManageDialog::isPointAlreadyBound(const QString &pointId)
 
 bool MonitorPointManageDialog::unbindPoint(const QString &pointId)
 {
-    QFile f(BIND_FILE);
+    // 将 sensor_storage.txt 中该监测点对应记录的最后一列改回"未绑定"
+    QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
     QString allText = f.readAll();
@@ -306,15 +326,25 @@ bool MonitorPointManageDialog::unbindPoint(const QString &pointId)
 
     QStringList lines = allText.split("\n", Qt::KeepEmptyParts);
     QStringList newLines;
-    for (auto &line : lines) {
+    for (int i = 0; i < lines.size(); i++) {
+        QString line = lines[i];
         QStringList cols = line.split(",", Qt::KeepEmptyParts);
-        if (!(cols.size() >= 2 && cols[1] == pointId))
+        if (i == 0 || cols.size() < 8) {
             newLines << line;
+            continue;
+        }
+        if (cols[7] == pointId) {
+            cols[7] = "未绑定";
+            newLines << cols.join(",");
+        } else {
+            newLines << line;
+        }
     }
 
     if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
     st << newLines.join("\n");
     f.close();
     return true;
@@ -322,13 +352,53 @@ bool MonitorPointManageDialog::unbindPoint(const QString &pointId)
 
 bool MonitorPointManageDialog::bindSensorToPoint(const QString &sensorId, const QString &pointId)
 {
+    // 先解绑
     unbindPoint(pointId);
 
-    QFile f(BIND_FILE);
-    if (!f.open(QIODevice::Append | QIODevice::Text))
+    // 读写 sensor_storage.txt：找到该传感器型号未绑定的记录，修改最后一列
+    QFile f(SENSOR_FILE);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+    QString allText = f.readAll();
+    f.close();
+
+    QStringList lines = allText.split("\n", Qt::KeepEmptyParts);
+    QStringList newLines;
+    bool found = false;
+
+    for (int i = 0; i < lines.size(); i++) {
+        QString line = lines[i];
+        QStringList cols = line.split(",", Qt::KeepEmptyParts);
+        if (i == 0 || cols.size() < 8) {
+            newLines << line;
+            continue;
+        }
+        if (cols[2] == sensorId && !found && (cols[7].isEmpty() || cols[7] == "未绑定")) {
+            cols[7] = pointId;
+            newLines << cols.join(",");
+            found = true;
+        } else {
+            newLines << line;
+        }
+    }
+
+    if (!found) {
+        // 所有该型号传感器都已绑定 → 追加新记录
+        for (const QString &line : lines) {
+            QStringList cols = line.split(",", Qt::KeepEmptyParts);
+            if (cols.size() >= 8 && cols[2] == sensorId) {
+                cols[7] = pointId;
+                newLines << cols.join(",");
+                break;
+            }
+        }
+    }
+
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
     QTextStream st(&f);
-    st << sensorId << "," << pointId << "\n";
+    st.setEncoding(QStringConverter::Utf8);
+    st << newLines.join("\n");
     f.close();
     return true;
 }

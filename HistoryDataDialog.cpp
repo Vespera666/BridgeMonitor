@@ -1,15 +1,41 @@
 #include "HistoryDataDialog.h"
-#include "CableForceSensor.h"
-#include "VibrationSensor.h"
-#include "deflection.h"
-#include "displacement.h"
-#include "expansionjointsensor.h"
-#include "temperaturehumiditysensor.h"
-#include "windsensor.h"
 #include <QCoreApplication>
 #include <QDir>
+#include <QHeaderView>
 #include <QPainter>
+#include <QSet>
+#include <algorithm>
 #include <QtCharts/QChart>
+
+// ── dataType → 字段元信息映射 ──
+SensorFieldInfo HistoryDataDialog::fieldInfoForType(const QString &dataType)
+{
+    if (dataType == "风速风向传感器")
+        return {{"风速", "风向"}, {"m/s", "°"}, 2};
+    if (dataType == "温湿度监测传感器")
+        return {{"温度", "湿度"}, {"°C", "%"}, 2};
+    if (dataType == "索力监测传感器")
+        return {{"索力值"}, {"kN"}, 1};
+    if (dataType == "挠度传感器")
+        return {{"挠度"}, {"mm"}, 1};
+    if (dataType == "振动监测传感器")
+        return {{"振动频率"}, {"Hz"}, 1};
+    if (dataType == "支座位移传感器")
+        return {{"位移量"}, {"mm"}, 1};
+    if (dataType == "伸缩缝监测传感器")
+        return {{"伸缩量"}, {"mm"}, 1};
+    return {{"数值"}, {""}, 1};
+}
+
+// ── 辅助：拼接表头 ──
+static QStringList makeHeaders(const QStringList &names, const QStringList &units)
+{
+    QStringList h;
+    h << "时间";
+    for (int i = 0; i < names.size(); i++)
+        h << names[i] + "(" + units[i] + ")";
+    return h;
+}
 
 HistoryDataDialog::HistoryDataDialog(QWidget *parent)
     : QDialog(parent)
@@ -17,102 +43,121 @@ HistoryDataDialog::HistoryDataDialog(QWidget *parent)
     setWindowTitle("历史数据展示");
     resize(1200, 850);
     initUI();
-    refreshMonitorCombo();
 }
 
 void HistoryDataDialog::initUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(12);
-    mainLayout->setContentsMargins(15, 15, 15, 15);
+    mainLayout->setSpacing(8);
+    mainLayout->setContentsMargins(10, 10, 10, 10);
 
-    // 顶部过滤区域
-    QGroupBox *groupFilter = new QGroupBox("查询条件");
-    QHBoxLayout *filterLayout = new QHBoxLayout(groupFilter);
+    m_tabWidget = new QTabWidget();
+    m_tabs.resize(SENSOR_TYPES.size());
+
+    for (int i = 0; i < SENSOR_TYPES.size(); i++) {
+        createTabPage(i);
+        m_tabWidget->addTab(m_tabs[i].widget, SENSOR_LABELS[i]);
+    }
+
+    mainLayout->addWidget(m_tabWidget, 1);
+}
+
+void HistoryDataDialog::createTabPage(int index)
+{
+    HistoryTabPage &tab = m_tabs[index];
+    const QString &sensorType = SENSOR_TYPES[index];
+
+    // ── 容器 ──
+    tab.widget = new QWidget();
+    QVBoxLayout *pageLayout = new QVBoxLayout(tab.widget);
+    pageLayout->setSpacing(8);
+    pageLayout->setContentsMargins(8, 8, 8, 8);
+
+    // ── 顶部筛选栏 ──
+    QGroupBox *filterGroup = new QGroupBox("查询条件");
+    QHBoxLayout *filterLayout = new QHBoxLayout(filterGroup);
 
     filterLayout->addWidget(new QLabel("监测点："));
-    m_cbxMonitorPoint = new QComboBox();
-    m_cbxMonitorPoint->setMinimumWidth(180);
-    filterLayout->addWidget(m_cbxMonitorPoint);
+    tab.cbxPoint = new QComboBox();
+    tab.cbxPoint->setMinimumWidth(200);
+    filterLayout->addWidget(tab.cbxPoint);
 
     filterLayout->addSpacing(15);
     filterLayout->addWidget(new QLabel("起始日期："));
-    m_deStartDate = new QDateEdit(QDate::currentDate().addDays(-7));
-    m_deStartDate->setDisplayFormat("yyyy-MM-dd");
-    m_deStartDate->setCalendarPopup(true);
-    filterLayout->addWidget(m_deStartDate);
+    tab.deStart = new QDateEdit(QDate::currentDate().addDays(-7));
+    tab.deStart->setDisplayFormat("yyyy-MM-dd");
+    tab.deStart->setCalendarPopup(true);
+    filterLayout->addWidget(tab.deStart);
 
     filterLayout->addSpacing(10);
     filterLayout->addWidget(new QLabel("截止日期："));
-    m_deEndDate = new QDateEdit(QDate::currentDate());
-    m_deEndDate->setDisplayFormat("yyyy-MM-dd");
-    m_deEndDate->setCalendarPopup(true);
-    filterLayout->addWidget(m_deEndDate);
+    tab.deEnd = new QDateEdit(QDate::currentDate());
+    tab.deEnd->setDisplayFormat("yyyy-MM-dd");
+    tab.deEnd->setCalendarPopup(true);
+    filterLayout->addWidget(tab.deEnd);
 
     filterLayout->addSpacing(20);
-    m_btnQuery = new QPushButton("查询历史数据");
-    filterLayout->addWidget(m_btnQuery);
+    tab.btnQuery = new QPushButton("查询历史数据");
+    filterLayout->addWidget(tab.btnQuery);
     filterLayout->addStretch();
 
-    groupFilter->setMaximumHeight(90);
+    filterGroup->setMaximumHeight(80);
 
-    // 传感器信息标签
-    m_labSensorInfo = new QLabel("请先选择一个已绑定传感器的监测点");
-    m_labSensorInfo->setStyleSheet("color: #555; font-weight: bold; padding: 4px;");
+    // ── 传感器信息标签 ──
+    tab.labInfo = new QLabel("请选择一个监测点");
+    tab.labInfo->setStyleSheet("color: #555; font-weight: bold; padding: 4px;");
 
-    // 表格视图
-    m_tableModel = new DataTableModel(this);
-    m_tableView = new QTableView();
-    m_tableView->setModel(m_tableModel);
-    m_tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_tableView->horizontalHeader()->setStretchLastSection(true);
-    m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    // ── 表格 ──
+    tab.tableModel = new DataTableModel(tab.widget);
+    tab.tableView = new QTableView();
+    tab.tableView->setModel(tab.tableModel);
+    tab.tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    tab.tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    tab.tableView->horizontalHeader()->setStretchLastSection(true);
+    tab.tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-    // 图表视图
-    m_chartView = new QChartView();
-    m_chartView->setRenderHint(QPainter::Antialiasing);
-    // 空状态占位
+    // ── 图表（空占位） ──
+    tab.chartView = new QChartView();
+    tab.chartView->setRenderHint(QPainter::Antialiasing);
     {
         auto *emptyChart = new QChart();
         emptyChart->setTitle("查询数据后此处显示折线图");
-        m_chartView->setChart(emptyChart);
+        tab.chartView->setChart(emptyChart);
     }
 
-    // 上下分割：表格 + 图表
-    m_splitter = new QSplitter(Qt::Vertical);
-    m_splitter->addWidget(m_tableView);
-    m_splitter->addWidget(m_chartView);
-    m_splitter->setStretchFactor(0, 2);  // 表格占 2
-    m_splitter->setStretchFactor(1, 3);  // 图表占 3
+    // ── 上下分割器 ──
+    tab.splitter = new QSplitter(Qt::Vertical);
+    tab.splitter->addWidget(tab.tableView);
+    tab.splitter->addWidget(tab.chartView);
+    tab.splitter->setStretchFactor(0, 2);
+    tab.splitter->setStretchFactor(1, 3);
 
-    // 组装布局
-    mainLayout->addWidget(groupFilter);
-    mainLayout->addWidget(m_labSensorInfo);
-    mainLayout->addWidget(m_splitter, 1);  // splitter 拉伸填充剩余空间
+    // ── 组装 ──
+    pageLayout->addWidget(filterGroup);
+    pageLayout->addWidget(tab.labInfo);
+    pageLayout->addWidget(tab.splitter, 1);
 
-    // 信号槽
-    connect(m_btnQuery, &QPushButton::clicked, this, &HistoryDataDialog::slotQuery);
-    connect(m_cbxMonitorPoint,
+    // ── 填充监测点下拉框：按 dataType 筛选 ──
+    QVector<MonitoringPoint> allPoints = loadAllMonitorPoints();
+    for (const MonitoringPoint &mp : allPoints) {
+        if (mp.dataType == sensorType)
+            tab.cbxPoint->addItem(
+                QString("%1 - %2").arg(mp.pointId, mp.sectionName), mp.pointId);
+    }
+
+    // ── 信号连接 ──
+    connect(tab.btnQuery, &QPushButton::clicked, this, [this, index]() {
+        slotQuery(index);
+    });
+    connect(tab.cbxPoint,
             QOverload<int>::of(&QComboBox::currentIndexChanged),
             this,
-            &HistoryDataDialog::slotMonitorChanged);
+            [this, index](int) { slotMonitorChanged(index); });
+
+    slotMonitorChanged(index);
 }
 
-void HistoryDataDialog::refreshMonitorCombo()
-{
-    m_cbxMonitorPoint->clear();
-    QVector<MonitoringPoint> points = loadAllMonitorPoints();
-    for (const MonitoringPoint &mp : points) {
-        // 显示格式：监测点编号 - 断面名称
-        m_cbxMonitorPoint->addItem(
-            QString("%1 - %2").arg(mp.pointId, mp.sectionName),
-            mp.pointId);
-    }
-    // 触发一次以更新传感器信息
-    slotMonitorChanged(m_cbxMonitorPoint->currentIndex());
-}
-
+// ── 读取 monitor_storage.txt（4列：编号,断面,日期,传感器类型） ──
 QVector<MonitoringPoint> HistoryDataDialog::loadAllMonitorPoints()
 {
     QVector<MonitoringPoint> res;
@@ -139,6 +184,7 @@ QVector<MonitoringPoint> HistoryDataDialog::loadAllMonitorPoints()
         mp.pointId = cols[0];
         mp.sectionName = cols[1];
         mp.installDate = QDate::fromString(cols[2], "yyyy-MM-dd");
+        mp.dataType = (cols.size() >= 4) ? cols[3] : QString();
         mp.sensor = nullptr;
         res.append(mp);
     }
@@ -146,85 +192,7 @@ QVector<MonitoringPoint> HistoryDataDialog::loadAllMonitorPoints()
     return res;
 }
 
-QString HistoryDataDialog::getBindSensorByPointId(const QString &pid)
-{
-    QFile f(BIND_FILE);
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
-        return "";
-    QTextStream st(&f);
-    while (!st.atEnd()) {
-        QString line = st.readLine().trimmed();
-        QStringList cols = line.split(",");
-        if (cols.size() >= 2 && cols[1] == pid) {
-            f.close();
-            return cols[0];
-        }
-    }
-    f.close();
-    return "";
-}
-
-Sensor *HistoryDataDialog::loadSensorByModel(const QString &model)
-{
-    QFile f(SENSOR_FILE);
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
-        return nullptr;
-    QTextStream st(&f);
-    st.setEncoding(QStringConverter::Utf8);
-    bool skipHead = true;
-    while (!st.atEnd()) {
-        QString line = st.readLine().trimmed();
-        if (line.isEmpty())
-            continue;
-        if (skipHead) {
-            skipHead = false;
-            continue;
-        }
-        QStringList cols = line.split(",", Qt::KeepEmptyParts);
-        if (cols.size() < 7)
-            continue;
-        if (cols[2] != model)
-            continue;
-
-        // 找到目标传感器
-        Sensor *s = nullptr;
-        QString type = cols[6];
-        if (type == "风速风向传感器")
-            s = new WindSensor();
-        else if (type == "振动监测传感器")
-            s = new VibrationSensor();
-        else if (type == "索力监测传感器")
-            s = new CableForceSensor();
-        else if (type == "挠度传感器")
-            s = new DeflectionSensor();
-        else if (type == "支座位移传感器")
-            s = new DisplacementSensor();
-        else if (type == "伸缩缝监测传感器")
-            s = new ExpansionJointSensor();
-        else if (type == "温湿度监测传感器")
-            s = new TemperatureHumiditySensor();
-        else
-            s = new WindSensor();
-
-        s->name = cols[0];
-        s->size = cols[1];
-        s->model = cols[2];
-        s->manufacturer = cols[3];
-        s->generDate = QDate::fromString(cols[4], "yyyy-MM-dd");
-        s->frequency = cols[5].toInt();
-        s->boundPoint = nullptr;
-        f.close();
-        return s;
-    }
-    f.close();
-    return nullptr;
-}
-
-// ── 按监测点编号查找 CSV 文件路径 ──
-// 依次搜索以下目录（开发/部署兼容）：
-//   1. exe目录/data/         — 部署时
-//   2. exe目录/../data/      — Qt Creator 运行目录
-//   3. exe目录/../../data/   — Qt Creator 嵌套构建目录
+// ── 查找 CSV 文件路径 ──
 QString HistoryDataDialog::findCsvPath(const QString &pointId) const
 {
     const QString fileName = pointId + ".csv";
@@ -239,10 +207,9 @@ QString HistoryDataDialog::findCsvPath(const QString &pointId) const
         if (QFile::exists(fullPath))
             return fullPath;
     }
-    return {}; // 没找到
+    return {};
 }
 
-// ── 按日期范围过滤 ──
 void HistoryDataDialog::filterByDateRange(QVector<DataPoint> &data,
                                           const QDateTime &start,
                                           const QDateTime &end) const
@@ -256,89 +223,130 @@ void HistoryDataDialog::filterByDateRange(QVector<DataPoint> &data,
     data = filtered;
 }
 
-// ── 加载真实 CSV 或回退到模拟数据 ──
-QVector<DataPoint> HistoryDataDialog::loadRealOrMockData(Sensor *sensor,
-                                                         const QString &pointId,
-                                                         const QDateTime &start,
-                                                         const QDateTime &end)
+// ── 加载监测点数据（不依赖传感器绑定） ──
+QVector<DataPoint> HistoryDataDialog::loadDataForPoint(const QString &pointId,
+                                                       const QString &dataType,
+                                                       const QDateTime &start,
+                                                       const QDateTime &end)
 {
-    if (!sensor)
-        return {};
+    SensorFieldInfo info = fieldInfoForType(dataType);
 
-    // 尝试从预处理后的 CSV 加载真实数据
-    QString csvPath = findCsvPath(pointId);
-    if (!csvPath.isEmpty()) {
-        QVector<DataPoint> data;
-
-        // 判断通道名结尾：-A 或 -B 表示该通道只含传感器部分字段
-        int fieldCount = sensor->fieldNames().size();
-        int valueIndex = 0;         // 通道值对应传感器 fieldNames 的索引
-        if (pointId.endsWith("-A"))
-            valueIndex = 0;
-        else if (pointId.endsWith("-B"))
-            valueIndex = 1;
-
-        // 单字段传感器 → 直接用 FileManager::readCsv
-        if (fieldCount == 1 && valueIndex == 0) {
-            data = sensor->loadFile(csvPath);
+    // ── 单字段：直接读 {pointId}.csv ──
+    if (info.fieldCount == 1) {
+        QString csvPath = findCsvPath(pointId);
+        if (!csvPath.isEmpty()) {
+            QVector<DataPoint> data;
+            QFile file(csvPath);
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&file);
+                in.setEncoding(QStringConverter::Utf8);
+                int lineNo = 0;
+                while (!in.atEnd()) {
+                    QString line = in.readLine().trimmed();
+                    lineNo++;
+                    if (line.isEmpty() || line.startsWith('#') || lineNo == 1)
+                        continue;
+                    QStringList parts = line.split(",");
+                    if (parts.size() < 2)
+                        continue;
+                    QDateTime ts = QDateTime::fromString(parts[0], "yyyy-MM-dd HH:mm:ss");
+                    if (!ts.isValid())
+                        ts = QDateTime::fromString(parts[0], "yyyy/MM/dd HH:mm:ss");
+                    DataPoint dp;
+                    dp.timeStamp = ts;
+                    dp.value.append(parts[1].toDouble());
+                    data.append(dp);
+                }
+                file.close();
+            }
             filterByDateRange(data, start, end);
             return data;
         }
-
-        // 多字段传感器的 A/B 拆分 CSV → 自行解析（避免列数校验失败）
-        QFile file(csvPath);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            in.setEncoding(QStringConverter::Utf8);
-            int lineNo = 0;
-            while (!in.atEnd()) {
-                QString line = in.readLine().trimmed();
-                lineNo++;
-                if (line.isEmpty() || line.startsWith('#') || lineNo == 1)
-                    continue;
-                QStringList parts = line.split(",");
-                if (parts.size() < 2)
-                    continue;
-                QDateTime ts = QDateTime::fromString(parts[0], "yyyy-MM-dd HH:mm:ss");
-                if (!ts.isValid())
-                    ts = QDateTime::fromString(parts[0], "yyyy/MM/dd HH:mm:ss");
-                DataPoint dp;
-                dp.timeStamp = ts;
-                // 构造完整的 value 向量，未提供字段填 0
-                for (int i = 0; i < fieldCount; i++)
-                    dp.value.append(i == valueIndex ? parts[1].toDouble() : 0.0);
-                data.append(dp);
-            }
-            file.close();
-        }
-        filterByDateRange(data, start, end);
-        return data;
     }
 
-    // 回退：生成模拟数据
+    // ── 双字段：合并 {pointId}-A.csv + {pointId}-B.csv ──
+    if (info.fieldCount == 2) {
+        QString pathA = findCsvPath(pointId + "-A");
+        QString pathB = findCsvPath(pointId + "-B");
+
+        if (!pathA.isEmpty() || !pathB.isEmpty()) {
+            auto readToMap = [](const QString &path) -> QMap<qint64, double> {
+                QMap<qint64, double> map;
+                QFile f(path);
+                if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+                    return map;
+                QTextStream in(&f);
+                in.setEncoding(QStringConverter::Utf8);
+                int lineNo = 0;
+                while (!in.atEnd()) {
+                    QString line = in.readLine().trimmed();
+                    lineNo++;
+                    if (line.isEmpty() || line.startsWith('#') || lineNo == 1)
+                        continue;
+                    QStringList parts = line.split(",");
+                    if (parts.size() < 2)
+                        continue;
+                    QDateTime ts = QDateTime::fromString(parts[0], "yyyy-MM-dd HH:mm:ss");
+                    if (!ts.isValid())
+                        ts = QDateTime::fromString(parts[0], "yyyy/MM/dd HH:mm:ss");
+                    if (ts.isValid())
+                        map[ts.toMSecsSinceEpoch()] = parts[1].toDouble();
+                }
+                f.close();
+                return map;
+            };
+
+            QMap<qint64, double> mapA = pathA.isEmpty() ? QMap<qint64, double>() : readToMap(pathA);
+            QMap<qint64, double> mapB = pathB.isEmpty() ? QMap<qint64, double>() : readToMap(pathB);
+
+            QSet<qint64> allKeys;
+            for (qint64 k : mapA.keys()) allKeys.insert(k);
+            for (qint64 k : mapB.keys()) allKeys.insert(k);
+            QList<qint64> sortedKeys = allKeys.values();
+            std::sort(sortedKeys.begin(), sortedKeys.end());
+
+            QVector<DataPoint> data;
+            data.reserve(sortedKeys.size());
+            for (qint64 key : sortedKeys) {
+                DataPoint dp;
+                dp.timeStamp = QDateTime::fromMSecsSinceEpoch(key);
+                dp.value.append(mapA.value(key, 0.0));
+                dp.value.append(mapB.value(key, 0.0));
+                data.append(dp);
+            }
+            filterByDateRange(data, start, end);
+            if (!data.isEmpty())
+                return data;
+        }
+    }
+
+    // ── 回退：生成模拟数据 ──
     qint64 totalSecs = start.secsTo(end);
     if (totalSecs <= 0)
         return {};
 
-    int interval = sensor->frequency > 0 ? sensor->frequency : 1;
+    int interval = 60;
     int count = static_cast<int>(totalSecs / interval);
     if (count > 2000)
         count = 2000;
 
-    QVector<DataPoint> mockData = sensor->generateMockData(count);
-    for (int i = 0; i < mockData.size(); i++)
-        mockData[i].timeStamp = start.addSecs(i * interval);
-
-    filterByDateRange(mockData, start, end);
+    QVector<DataPoint> mockData;
+    for (int i = 0; i < count; i++) {
+        DataPoint dp;
+        dp.timeStamp = start.addSecs(i * interval);
+        for (int j = 0; j < info.fieldCount; j++)
+            dp.value.append(0.0);
+        mockData.append(dp);
+    }
     return mockData;
 }
 
-// ── 绘制折线图 ──
-void HistoryDataDialog::updateChart(const QVector<DataPoint> &data,
-                                    const QStringList &fieldNames)
+// ── 静态图表更新 ──
+void HistoryDataDialog::updateChartForView(QChartView *chartView,
+                                           const QVector<DataPoint> &data,
+                                           const QStringList &fieldNames)
 {
-    // 清除旧图表
-    QChart *oldChart = m_chartView->chart();
+    QChart *oldChart = chartView->chart();
     if (oldChart)
         oldChart->deleteLater();
 
@@ -347,22 +355,19 @@ void HistoryDataDialog::updateChart(const QVector<DataPoint> &data,
     chart->setAnimationOptions(QChart::SeriesAnimations);
 
     if (data.isEmpty()) {
-        m_chartView->setChart(chart);
+        chartView->setChart(chart);
         return;
     }
 
-    // X 轴：时间
     auto *axisX = new QDateTimeAxis();
     axisX->setFormat("MM-dd\nHH:mm");
     axisX->setRange(data.first().timeStamp, data.last().timeStamp);
     chart->addAxis(axisX, Qt::AlignBottom);
 
-    // Y 轴：自动范围
     auto *axisY = new QValueAxis();
     axisY->setLabelFormat("%.1f");
     chart->addAxis(axisY, Qt::AlignLeft);
 
-    // 每个字段一条折线
     const QList<QColor> colors = {
         QColor("#e74c3c"), QColor("#2980b9"), QColor("#27ae60"),
         QColor("#8e44ad"), QColor("#e67e22"), QColor("#1abc9c"),
@@ -385,111 +390,81 @@ void HistoryDataDialog::updateChart(const QVector<DataPoint> &data,
         series->attachAxis(axisY);
     }
 
-    m_chartView->setChart(chart);
+    chartView->setChart(chart);
 }
 
-void HistoryDataDialog::slotQuery()
+// ── 查询 ──
+void HistoryDataDialog::slotQuery(int tabIndex)
 {
-    QString pointId = m_cbxMonitorPoint->currentData().toString();
+    if (tabIndex < 0 || tabIndex >= m_tabs.size())
+        return;
+
+    HistoryTabPage &tab = m_tabs[tabIndex];
+    QString pointId = tab.cbxPoint->currentData().toString();
     if (pointId.isEmpty()) {
         QMessageBox::warning(this, "提示", "请先选择监测点");
         return;
     }
 
-    QDateTime start(m_deStartDate->date(), QTime(0, 0, 0));
-    QDateTime end(m_deEndDate->date(), QTime(23, 59, 59));
+    QDateTime start(tab.deStart->date(), QTime(0, 0, 0));
+    QDateTime end(tab.deEnd->date(), QTime(23, 59, 59));
 
     if (start > end) {
         QMessageBox::warning(this, "提示", "起始日期不能晚于截止日期");
         return;
     }
 
-    // 查找绑定的传感器型号
-    QString sensorModel = getBindSensorByPointId(pointId);
-    if (sensorModel.isEmpty()) {
-        QMessageBox::information(this, "提示", "该监测点未绑定传感器，无法查看历史数据");
-        return;
-    }
+    // 从当前 Tab 的传感器类型确定字段信息
+    QString dataType = SENSOR_TYPES[tabIndex];
+    SensorFieldInfo info = fieldInfoForType(dataType);
 
-    // 加载传感器对象
-    Sensor *sensor = loadSensorByModel(sensorModel);
-    if (!sensor) {
-        QMessageBox::warning(this, "错误", "未找到绑定的传感器信息");
-        return;
-    }
-
-    // 加载数据（优先真实 CSV，回退模拟）
+    // 加载数据（不依赖传感器绑定）
     QString csvPath = findCsvPath(pointId);
-    QVector<DataPoint> data = loadRealOrMockData(sensor, pointId, start, end);
+    QVector<DataPoint> data = loadDataForPoint(pointId, dataType, start, end);
     QString sourceTag = csvPath.isEmpty() ? "模拟数据" : "真实数据";
-    if (data.isEmpty()) {
-        QMessageBox::information(this, "提示",
-            QString("所选时间范围内无数据\n数据来源: %1").arg(sourceTag));
-    }
 
-    // 更新表格模型
-    QStringList headers = sensor->headerLabels();
-    m_tableModel->loadData(data, headers);
-
-    // 取出传感器信息（delete 前）
-    QStringList fieldNames = sensor->fieldNames();
-    QString sName = sensor->name;
-    QString sModel = sensor->model;
-    QString sType = sensor->sensorType();
-    int sFreq = sensor->frequency;
-    delete sensor;
+    // 更新表格
+    QStringList headers = makeHeaders(info.fieldNames, info.fieldUnits);
+    tab.tableModel->loadData(data, headers);
 
     // 更新图表
-    updateChart(data, fieldNames);
+    updateChartForView(tab.chartView, data, info.fieldNames);
 
-    // 更新传感器信息标签
-    m_labSensorInfo->setText(
-        QString("当前传感器：%1 | 型号：%2 | 类型：%3 | 采集频率：每 %4 秒 | 数据条数：%5 | 来源：%6")
-            .arg(sName)
-            .arg(sModel)
-            .arg(sType)
-            .arg(sFreq)
+    // 更新信息标签
+    tab.labInfo->setText(
+        QString("监测点【%1】| 数据类型：%2 | 数据条数：%3 | 来源：%4")
+            .arg(pointId)
+            .arg(dataType)
             .arg(data.size())
             .arg(sourceTag));
 }
 
-void HistoryDataDialog::slotMonitorChanged(int index)
+// ── 监测点切换 ──
+void HistoryDataDialog::slotMonitorChanged(int tabIndex)
 {
-    if (index < 0)
+    if (tabIndex < 0 || tabIndex >= m_tabs.size())
         return;
 
-    QString pointId = m_cbxMonitorPoint->itemData(index).toString();
-    QString sensorModel = getBindSensorByPointId(pointId);
+    HistoryTabPage &tab = m_tabs[tabIndex];
+    if (tab.cbxPoint->currentIndex() < 0)
+        return;
 
-    if (sensorModel.isEmpty()) {
-        m_labSensorInfo->setText(
-            QString("监测点【%1】未绑定传感器，无法查询历史数据").arg(pointId));
-        m_labSensorInfo->setStyleSheet("color: #c0392b; font-weight: bold; padding: 4px;");
-        m_btnQuery->setEnabled(false);
+    QString pointId = tab.cbxPoint->currentData().toString();
+    bool hasCsv = !findCsvPath(pointId).isEmpty();
+
+    // 也检查双字段传感器（FS/WSD）的 -A 文件
+    if (!hasCsv)
+        hasCsv = !findCsvPath(pointId + "-A").isEmpty();
+
+    if (hasCsv) {
+        tab.labInfo->setText(
+            QString("监测点【%1】已有真实数据 ✓ | 点击查询按钮查看历史趋势").arg(pointId));
+        tab.labInfo->setStyleSheet("color: #27ae60; font-weight: bold; padding: 4px;");
+        tab.btnQuery->setEnabled(true);
     } else {
-        // 只加载轻量信息显示
-        Sensor *sensor = loadSensorByModel(sensorModel);
-        if (sensor) {
-            bool hasCsv = !findCsvPath(pointId).isEmpty();
-            m_labSensorInfo->setText(
-                QString("监测点【%1】已绑定传感器：%2 | 型号：%3 | 类型：%4 | 采集频率：每 %5 秒 | %6")
-                    .arg(pointId)
-                    .arg(sensor->name)
-                    .arg(sensor->model)
-                    .arg(sensor->sensorType())
-                    .arg(sensor->frequency)
-                    .arg(hasCsv ? "已有真实数据 ✓" : "无数据文件，将使用模拟数据"));
-            m_labSensorInfo->setStyleSheet(
-                "color: #27ae60; font-weight: bold; padding: 4px;");
-            m_btnQuery->setEnabled(true);
-            delete sensor;
-        } else {
-            m_labSensorInfo->setText(
-                QString("监测点【%1】绑定传感器型号【%2】，但传感器信息未找到")
-                    .arg(pointId, sensorModel));
-            m_labSensorInfo->setStyleSheet(
-                "color: #e67e22; font-weight: bold; padding: 4px;");
-            m_btnQuery->setEnabled(false);
-        }
+        tab.labInfo->setText(
+            QString("监测点【%1】无数据文件，查询时将使用模拟数据").arg(pointId));
+        tab.labInfo->setStyleSheet("color: #e67e22; font-weight: bold; padding: 4px;");
+        tab.btnQuery->setEnabled(true);
     }
 }

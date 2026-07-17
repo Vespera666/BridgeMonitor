@@ -46,6 +46,8 @@ QVariant MonitorPointTableModel::data(const QModelIndex &index, int role) const
         case 2:
             return mp.installDate.toString("yyyy-MM-dd");
         case 3:
+            return mp.dataType.isEmpty() ? "未分类" : mp.dataType;
+        case 4:
             return m_bindSensorText[r];
         default:
             return {};

@@ -4,7 +4,7 @@ MonitorPointEditDialog::MonitorPointEditDialog(QWidget *parent)
     : QDialog(parent)
 {
     setWindowTitle("新增监测点");
-    setFixedSize(420, 260);
+    setFixedSize(420, 320);
 
     m_lePointId = new QLineEdit;
     m_lePointId->setPlaceholderText("如 MP-W-01");
@@ -13,11 +13,23 @@ MonitorPointEditDialog::MonitorPointEditDialog(QWidget *parent)
     m_deInstall = new QDateEdit(QDate::currentDate());
     m_deInstall->setDisplayFormat("yyyy-MM-dd");
 
+    m_cmbDataType = new QComboBox();
+    m_cmbDataType->addItems({
+        "索力监测传感器",
+        "挠度传感器",
+        "振动监测传感器",
+        "支座位移传感器",
+        "伸缩缝监测传感器",
+        "风速风向传感器",
+        "温湿度监测传感器",
+    });
+
     QFormLayout *form = new QFormLayout();
     form->setSpacing(10);
     form->addRow("监测点编号：", m_lePointId);
     form->addRow("断面名称：", m_leSection);
     form->addRow("安装日期：", m_deInstall);
+    form->addRow("数据类型：", m_cmbDataType);
 
     QPushButton *btnOk = new QPushButton("确认保存");
     QPushButton *btnCancel = new QPushButton("取消");
@@ -44,6 +56,10 @@ void MonitorPointEditDialog::setEditTarget(const MonitoringPoint &mp)
     m_lePointId->setText(mp.pointId);
     m_leSection->setText(mp.sectionName);
     m_deInstall->setDate(mp.installDate);
+    // 设置数据类型
+    int idx = m_cmbDataType->findText(mp.dataType);
+    if (idx >= 0)
+        m_cmbDataType->setCurrentIndex(idx);
 }
 
 MonitoringPoint MonitorPointEditDialog::getPointData() const
@@ -52,6 +68,7 @@ MonitoringPoint MonitorPointEditDialog::getPointData() const
     mp.pointId = m_lePointId->text().trimmed();
     mp.sectionName = m_leSection->text().trimmed();
     mp.installDate = m_deInstall->date();
+    mp.dataType = m_cmbDataType->currentText();
     mp.sensor = nullptr;
     return mp;
 }

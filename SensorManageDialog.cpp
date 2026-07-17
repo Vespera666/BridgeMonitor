@@ -85,10 +85,6 @@ void SensorManageDialog::initFile()
         st << "监测点编号,断面名称,安装日期\n";
         monF.close();
     }
-    // 绑定文件
-    QFile bindF(BIND_FILE);
-    if (!bindF.exists())
-        bindF.open(QIODevice::WriteOnly | QIODevice::Text);
 }
 void SensorManageDialog::clearTable()
 {
@@ -235,24 +231,7 @@ bool SensorManageDialog::delSensorByModel(const QString &model)
     }
     if (!find)
         return false;
-    // 删除绑定记录
-    QFile bindF(BIND_FILE);
-    bindF.open(QIODevice::ReadOnly | QIODevice::Text);
-    QString bindAll = bindF.readAll();
-    bindF.close();
-    QStringList bindLines = bindAll.split("\n");
-    QStringList newBind;
-    for (QString bl : bindLines) {
-        QStringList bc = bl.split(",");
-        if (bc.size() >= 1 && bc[0] == model)
-            continue;
-        newBind.append(bl);
-    }
-    bindF.open(QIODevice::WriteOnly | QIODevice::Text);
-    QTextStream bindSt(&bindF);
-    bindSt << newBind.join("\n");
-    bindF.close();
-    // 写回传感器文件
+    // 写回传感器文件（删除传感器即自动解绑）
     f.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream st(&f);
     st << newLines.join("\n");
@@ -261,16 +240,25 @@ bool SensorManageDialog::delSensorByModel(const QString &model)
 }
 QString SensorManageDialog::getBindPoint(const QString &sensorModel)
 {
-    QFile f(BIND_FILE);
+    // 从 sensor_storage.txt 最后一列读取绑定关系
+    QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return "";
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
+    bool skipHead = true;
     while (!st.atEnd()) {
         QString line = st.readLine().trimmed();
-        QStringList cols = line.split(",");
-        if (cols.size() >= 2 && cols[0] == sensorModel) {
+        if (line.isEmpty())
+            continue;
+        if (skipHead) {
+            skipHead = false;
+            continue;
+        }
+        QStringList cols = line.split(",", Qt::KeepEmptyParts);
+        if (cols.size() >= 8 && cols[2] == sensorModel && cols[7] != "未绑定") {
             f.close();
-            return cols[1];
+            return cols[7];
         }
     }
     f.close();
@@ -283,6 +271,7 @@ QVector<MonitoringPoint> SensorManageDialog::loadAllMonitor()
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return res;
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
     bool skipHead = true;
     while (!st.atEnd()) {
         QString line = st.readLine().trimmed();
@@ -299,6 +288,7 @@ QVector<MonitoringPoint> SensorManageDialog::loadAllMonitor()
         mp.pointId = col[0];
         mp.sectionName = col[1];
         mp.installDate = QDate::fromString(col[2], "yyyy-MM-dd");
+        mp.dataType = (col.size() >= 4) ? col[3] : QString();
         mp.sensor = nullptr;
         res.append(mp);
     }
@@ -308,15 +298,23 @@ QVector<MonitoringPoint> SensorManageDialog::loadAllMonitor()
 // 新增：判断监测点是否已绑定任意传感器
 bool SensorManageDialog::isPointHasBind(const QString &monId)
 {
-    QFile f(BIND_FILE);
+    // 扫描 sensor_storage.txt 最后一列
+    QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
+    bool skipHead = true;
     while (!st.atEnd()) {
         QString line = st.readLine().trimmed();
+        if (line.isEmpty())
+            continue;
+        if (skipHead) {
+            skipHead = false;
+            continue;
+        }
         QStringList cols = line.split(",", Qt::KeepEmptyParts);
-        // bind文件格式：传感器型号,监测点编号
-        if (cols.size() >= 2 && cols[1] == monId) {
+        if (cols.size() >= 8 && cols[7] == monId) {
             f.close();
             return true;
         }
@@ -336,7 +334,7 @@ void SensorManageDialog::bindPoint()
     QString senModel = m_cmbSensorSel->currentText().split(" | ").first();
     QString monId = m_cmbMonitorSel->currentText().split(" - ").last();
 
-    // 核心校验：监测点已绑定则警告，直接终止绑定
+    // 核心校验：监测点已绑定则警告
     if (isPointHasBind(monId)) {
         QMessageBox::warning(
             this,
@@ -346,22 +344,49 @@ void SensorManageDialog::bindPoint()
         return;
     }
 
-    // 原有绑定逻辑不变
-    QFile f(BIND_FILE);
+    // 读写 sensor_storage.txt：修改/追加传感器记录最后一列
+    QFile f(SENSOR_FILE);
     f.open(QIODevice::ReadOnly | QIODevice::Text);
     QString all = f.readAll();
     f.close();
-    QStringList lines = all.split("\n");
+    QStringList lines = all.split("\n", Qt::KeepEmptyParts);
     QStringList newLines;
-    for (QString l : lines) {
-        QStringList col = l.split(",");
-        if (col.size() >= 1 && col[0] == senModel)
+    bool found = false; // 是否找到该型号且未绑定的记录
+
+    for (int i = 0; i < lines.size(); i++) {
+        QString l = lines[i];
+        QStringList col = l.split(",", Qt::KeepEmptyParts);
+        if (i == 0 || col.size() < 8) {
+            // 表头或无效行
+            newLines.append(l);
             continue;
-        newLines.append(l);
+        }
+        if (col[2] == senModel && !found && (col.size() < 8 || col[7].isEmpty() || col[7] == "未绑定")) {
+            // 找到该型号且未绑定 → 直接修改最后一列
+            col[7] = monId;
+            newLines.append(col.join(","));
+            found = true;
+        } else {
+            newLines.append(l);
+        }
     }
-    newLines.append(QString("%1,%2").arg(senModel).arg(monId));
+
+    if (!found) {
+        // 所有该型号传感器都已绑定 → 追加新记录
+        // 从现有记录复制传感器信息
+        for (const QString &l : lines) {
+            QStringList col = l.split(",", Qt::KeepEmptyParts);
+            if (col.size() >= 8 && col[2] == senModel) {
+                col[7] = monId;
+                newLines.append(col.join(","));
+                break;
+            }
+        }
+    }
+
     f.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
     st << newLines.join("\n");
     f.close();
     refreshTable();
@@ -373,20 +398,30 @@ void SensorManageDialog::unBindPoint()
     if (senIdx < 0)
         return;
     QString senModel = m_cmbSensorSel->currentText().split(" | ").first();
-    QFile f(BIND_FILE);
+    // 在 sensor_storage.txt 中将该型号对应记录的最后一列改回"未绑定"
+    QFile f(SENSOR_FILE);
     f.open(QIODevice::ReadOnly | QIODevice::Text);
     QString all = f.readAll();
     f.close();
-    QStringList lines = all.split("\n");
+    QStringList lines = all.split("\n", Qt::KeepEmptyParts);
     QStringList newLines;
-    for (QString l : lines) {
-        QStringList col = l.split(",");
-        if (col.size() >= 1 && col[0] == senModel)
+    for (int i = 0; i < lines.size(); i++) {
+        QString l = lines[i];
+        QStringList col = l.split(",", Qt::KeepEmptyParts);
+        if (i == 0 || col.size() < 8) {
+            newLines.append(l);
             continue;
-        newLines.append(l);
+        }
+        if (col[2] == senModel && col[7] != "未绑定") {
+            col[7] = "未绑定";
+            newLines.append(col.join(","));
+        } else {
+            newLines.append(l);
+        }
     }
     f.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream st(&f);
+    st.setEncoding(QStringConverter::Utf8);
     st << newLines.join("\n");
     f.close();
     refreshTable();

@@ -23,7 +23,7 @@ public:
 private:
     QVector<MonitoringPoint> m_points;
     QStringList m_bindSensorText; // 每行对应绑定传感器型号/未绑定
-    const QStringList m_header = {"监测点编号", "断面名称", "安装日期", "绑定传感器"};
+    const QStringList m_header = {"监测点编号", "断面名称", "安装日期", "数据类型", "绑定传感器"};
 };
 
 #endif // MONITORPOINTTABLEMODEL_H

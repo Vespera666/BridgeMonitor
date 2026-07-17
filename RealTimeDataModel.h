@@ -35,6 +35,10 @@ public:
                         Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const override;
 
+    // 获取第 row 行对应的监测点 ID（用于图表联动）
+    QString pointIdAt(int row) const;
+    QString sensorModelAt(int row) const;
+
 private:
     QVector<MonitoringPoint> m_points;
     QVector<SensorMeta> m_sensorMetas;

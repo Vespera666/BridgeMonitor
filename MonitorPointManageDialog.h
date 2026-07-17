@@ -29,7 +29,6 @@ public:
 private:
     // 文件常量
     const QString MONITOR_FILE = "monitor_storage.txt";
-    const QString BIND_FILE = "bind_link.txt";
     const QString SENSOR_FILE = "sensor_storage.txt";
 
     // UI控件

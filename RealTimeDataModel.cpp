@@ -61,13 +61,9 @@ QVariant RealTimeDataModel::data(const QModelIndex &index, int role) const
         case 1:
             return mp.sectionName;
         case 2:
-            return (r < m_sensorMetas.size())
-                       ? m_sensorMetas[r].sensorType
-                       : "未绑定";
+            return (r < m_sensorMetas.size()) ? m_sensorMetas[r].sensorType : "未绑定";
         case 3:
-            return (r < m_sensorMetas.size())
-                       ? m_sensorMetas[r].model
-                       : QString();
+            return (r < m_sensorMetas.size()) ? m_sensorMetas[r].model : QString();
         case 4:
             return (r < m_latestData.size())
                        ? m_latestData[r].timeStamp.toString("yyyy-MM-dd HH:mm:ss")
@@ -94,6 +90,20 @@ QVariant RealTimeDataModel::data(const QModelIndex &index, int role) const
     if (role == Qt::TextAlignmentRole)
         return int(Qt::AlignCenter | Qt::AlignVCenter);
 
+    return {};
+}
+
+QString RealTimeDataModel::pointIdAt(int row) const
+{
+    if (row >= 0 && row < m_points.size())
+        return m_points[row].pointId;
+    return {};
+}
+
+QString RealTimeDataModel::sensorModelAt(int row) const
+{
+    if (row >= 0 && row < m_sensorMetas.size())
+        return m_sensorMetas[row].model;
     return {};
 }
 

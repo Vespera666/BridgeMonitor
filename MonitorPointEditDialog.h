@@ -1,6 +1,7 @@
 #ifndef MONITORPOINTEDITDIALOG_H
 #define MONITORPOINTEDITDIALOG_H
 
+#include <QComboBox>
 #include <QDateEdit>
 #include <QDialog>
 #include <QFormLayout>
@@ -25,6 +26,7 @@ private:
     QLineEdit *m_lePointId;
     QLineEdit *m_leSection;
     QDateEdit *m_deInstall;
+    QComboBox *m_cmbDataType;
     bool m_isAddMode = true;
     QString m_oldPointId;
 };

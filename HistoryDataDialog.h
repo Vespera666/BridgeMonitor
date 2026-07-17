@@ -7,11 +7,11 @@
 #include <QFile>
 #include <QGroupBox>
 #include <QHBoxLayout>
-#include <QHeaderView>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QTableView>
 #include <QTextStream>
 #include <QVBoxLayout>
@@ -23,59 +23,74 @@
 #include "DataPoint.h"
 #include "DataTableModel.h"
 #include "monitorpoint.h"
-#include "sensor.h"
 
-// 历史数据展示对话框 —— 选择监测点后，展示其传感器采集的历史数据
+// ── 每种传感器类型的字段元信息 ──
+struct SensorFieldInfo
+{
+    QStringList fieldNames;
+    QStringList fieldUnits;
+    int fieldCount;    // 1=单字段直接读CSV, 2=双字段需合并-A/-B
+};
+
+// ── 每个 Tab 页的独立控件集合 ──
+struct HistoryTabPage
+{
+    QWidget *widget = nullptr;
+    QComboBox *cbxPoint = nullptr;
+    QDateEdit *deStart = nullptr;
+    QDateEdit *deEnd = nullptr;
+    QPushButton *btnQuery = nullptr;
+    QLabel *labInfo = nullptr;
+    QTableView *tableView = nullptr;
+    DataTableModel *tableModel = nullptr;
+    QChartView *chartView = nullptr;
+    QSplitter *splitter = nullptr;
+};
+
+// 历史数据展示对话框 —— 按传感器类型分Tab，不依赖传感器绑定
 class HistoryDataDialog : public QDialog
 {
     Q_OBJECT
 public:
     explicit HistoryDataDialog(QWidget *parent = nullptr);
 
+    // 根据 dataType 获取字段元信息
+    static SensorFieldInfo fieldInfoForType(const QString &dataType);
+
 private:
-    // 文件常量
     const QString MONITOR_FILE = "monitor_storage.txt";
-    const QString BIND_FILE = "bind_link.txt";
-    const QString SENSOR_FILE = "sensor_storage.txt";
 
-    // UI 控件
-    QTableView *m_tableView;
-    DataTableModel *m_tableModel;
-    QChartView *m_chartView;
-    QSplitter *m_splitter;
+    // 7 种传感器类型
+    const QStringList SENSOR_TYPES = {
+        "索力监测传感器", "挠度传感器", "振动监测传感器",
+        "支座位移传感器", "伸缩缝监测传感器", "风速风向传感器", "温湿度监测传感器",
+    };
+    const QStringList SENSOR_LABELS = {
+        "索力监测", "挠度", "振动", "支座位移", "伸缩缝", "风速风向", "温湿度",
+    };
 
-    QComboBox *m_cbxMonitorPoint;
-    QDateEdit *m_deStartDate;
-    QDateEdit *m_deEndDate;
-    QPushButton *m_btnQuery;
-
-    QLabel *m_labSensorInfo; // 显示当前传感器信息
+    QTabWidget *m_tabWidget;
+    QVector<HistoryTabPage> m_tabs;
 
     void initUI();
-    void refreshMonitorCombo();
+    void createTabPage(int index);
 
-    // 文件读写
     QVector<MonitoringPoint> loadAllMonitorPoints();
-    QString getBindSensorByPointId(const QString &pid);
-    Sensor *loadSensorByModel(const QString &model);
-    // 尝试从 CSV 加载真实数据，失败则回退到模拟数据
-    QVector<DataPoint> loadRealOrMockData(Sensor *sensor,
-                                          const QString &pointId,
-                                          const QDateTime &start,
-                                          const QDateTime &end);
-    // 根据监测点编号查找拆分后的 CSV 文件路径
+    QVector<DataPoint> loadDataForPoint(const QString &pointId,
+                                        const QString &dataType,
+                                        const QDateTime &start,
+                                        const QDateTime &end);
     QString findCsvPath(const QString &pointId) const;
-    // 按日期范围过滤 DataPoint 列表
     void filterByDateRange(QVector<DataPoint> &data,
                            const QDateTime &start,
                            const QDateTime &end) const;
-    // 绘制折线图
-    void updateChart(const QVector<DataPoint> &data,
-                     const QStringList &fieldNames);
+    static void updateChartForView(QChartView *chartView,
+                                   const QVector<DataPoint> &data,
+                                   const QStringList &fieldNames);
 
 private slots:
-    void slotQuery();
-    void slotMonitorChanged(int index);
+    void slotQuery(int tabIndex);
+    void slotMonitorChanged(int tabIndex);
 };
 
 #endif // HISTORYDATADIALOG_H

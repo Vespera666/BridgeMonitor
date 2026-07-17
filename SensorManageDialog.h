@@ -30,7 +30,6 @@ private:
     // 持久化文件路径
     const QString SENSOR_FILE = "sensor_storage.txt";
     const QString MONITOR_FILE = "monitor_storage.txt";
-    const QString BIND_FILE = "bind_link.txt";
     const QStringList m_sensorHeader = {"设备名称",
                                         "规格",
                                         "型号",

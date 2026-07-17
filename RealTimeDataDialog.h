@@ -10,16 +10,23 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSpinBox>
+#include <QSplitter>
 #include <QTableView>
 #include <QTextStream>
 #include <QVBoxLayout>
 #include <QVector>
+#include <QtCharts/QChartView>
+#include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QValueAxis>
 #include "DataPoint.h"
 #include "RealTimeDataModel.h"
 #include "monitorpoint.h"
 #include "sensor.h"
 
-// 实时数据展示对话框 —— 表格展示所有监测点最新传感器读数
+// 实时数据展示 —— 左表格+右图表，只展示已绑定传感器的监测点
+// 绑定关系来自 sensor_storage.txt 最后一列
 class RealTimeDataDialog : public QDialog
 {
     Q_OBJECT
@@ -27,29 +34,36 @@ public:
     explicit RealTimeDataDialog(QWidget *parent = nullptr);
 
 private:
-    // 文件常量
     const QString MONITOR_FILE = "monitor_storage.txt";
-    const QString BIND_FILE = "bind_link.txt";
     const QString SENSOR_FILE = "sensor_storage.txt";
 
-    // UI 控件
+    QSplitter *m_splitter;
     QTableView *m_tableView;
     RealTimeDataModel *m_tableModel;
+    QLabel *m_labTableHint;
+    QChartView *m_chartView;
+    QSpinBox *m_spinCount;
+    QLabel *m_labChartHint;
+    QPushButton *m_btnRefresh;
 
     void initUI();
     void refreshTable();
-    void clearTable();
 
-    // 文件读写（与 MonitorPointManageDialog 保持一致）
     QVector<MonitoringPoint> loadAllMonitorPoints();
     QVector<Sensor *> loadAllSensors();
-    QString getBindSensorByPointId(const QString &pid);
+    // 从 sensor_storage.txt 最后一列查绑定关系
+    QString getBoundSensorModelByPoint(const QString &pointId);
+    // 返回所有已绑定的监测点 ID 列表
+    QStringList getAllBoundPointIds();
     Sensor *findSensorByModel(const QString &model, const QVector<Sensor *> &sensors);
-    // 将 Sensor* 提取为值类型的 SensorMeta（避免指针生存期问题）
     SensorMeta extractSensorMeta(Sensor *s) const;
+    QString findCsvPath(const QString &pointId) const;
+    void updateRealtimeChart(const QString &pointId, int count);
 
 private slots:
     void slotRefresh();
+    void slotRowSelected(const QModelIndex &current, const QModelIndex &previous);
+    void slotCountChanged(int count);
 };
 
 #endif // REALTIMEDATADIALOG_H
