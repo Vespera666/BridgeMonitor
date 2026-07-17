@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
 从 监测点1.xlsx 生成持久化文件：
-  - monitor_storage.txt  (101 条监测点)
-  - sensor_storage.txt   (7 个传感器，每种类型一个)
-  - bind_link.txt        (101 条绑定关系)
+  - monitor_storage.txt  (监测点 + 传感器类型列)
+  - sensor_storage.txt   (7 个传感器类型)
 """
 
 import os
@@ -38,11 +37,22 @@ SENSOR_DEFS = [
     ("温湿度监测传感器", "WSD", "温湿度计",  "WSD", "通用"),
 ]
 
+# 监测点类型 → 传感器类型映射
+ptype_to_sensor = {
+    "索力":     "索力监测传感器",
+    "挠度":     "挠度传感器",
+    "振动":     "振动监测传感器",
+    "支座位移": "支座位移传感器",
+    "伸缩缝":   "伸缩缝监测传感器",
+    "风速风向": "风速风向传感器",
+    "温湿度":   "温湿度监测传感器",
+}
+
 # ── 1. monitor_storage.txt ─────────────────────────────────────
-monitor_lines = ["监测点编号,断面名称,安装日期"]
+monitor_lines = ["监测点编号,断面名称,安装日期,传感器类型"]
 for name, ptype, pid in points:
-    # 用 xlsx 中的"监测点名称"作为断面名称
-    monitor_lines.append(f"{pid},{name},2023-01-01")
+    sensor_type = ptype_to_sensor.get(ptype, "未知类型")
+    monitor_lines.append(f"{pid},{name},2023-01-01,{sensor_type}")
 
 monitor_path = os.path.join(OUT, "monitor_storage.txt")
 with open(monitor_path, "w", encoding="utf-8") as f:
@@ -62,32 +72,10 @@ with open(sensor_path, "w", encoding="utf-8") as f:
     f.write("\n".join(sensor_lines) + "\n")
 print(f"生成 sensor_storage.txt: {len(SENSOR_DEFS)} 个传感器")
 
-# ── 3. bind_link.txt ──────────────────────────────────────────
-# 映射：监测点类型 → 传感器型号
-type_to_model = {
-    "索力":     "SL-100",
-    "挠度":     "ND-100",
-    "振动":     "ZD-100",
-    "支座位移": "ZY-100",
-    "伸缩缝":   "LY-100",
-    "风速风向": "FS-100",
-    "温湿度":   "WSD-100",
-}
-
-bind_lines = []
-for name, ptype, pid in points:
-    model = type_to_model.get(ptype, "??-100")
-    bind_lines.append(f"{model},{pid}")
-
-bind_path = os.path.join(OUT, "bind_link.txt")
-with open(bind_path, "w", encoding="utf-8") as f:
-    f.write("\n".join(bind_lines) + "\n")
-print(f"生成 bind_link.txt: {len(bind_lines)} 条绑定")
-
 # ── 复制到 build 目录（运行时读取路径）─────────────────────────
 import shutil
 build_out = os.path.join(BASE, "build", "Desktop_Qt_6_11_1_MinGW_64_bit-Debug")
-for fn in ["monitor_storage.txt", "sensor_storage.txt", "bind_link.txt"]:
+for fn in ["monitor_storage.txt", "sensor_storage.txt"]:
     src = os.path.join(OUT, fn)
     dst = os.path.join(build_out, fn)
     shutil.copy2(src, dst)
