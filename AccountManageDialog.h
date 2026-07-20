@@ -14,13 +14,13 @@ public:
     explicit AccountManageDialog(UserManager *um, QWidget *parent = nullptr);
 
 private slots:
-    void onPromoteClicked(); // 提升为工程师
-    void onDemoteClicked();  // 降为分析师
-    void onDeleteClicked();  // 删除用户
+    void onPromoteClicked();
+    void onDemoteClicked();
+    void onDeleteClicked();
 
 private:
-    void refreshTable();          // 刷新表格显示
-    QString selectedUser() const; // 当前选中的用户名
+    void refreshTable();
+    QString selectedUser() const;
 
     UserManager *m_userManager;
     QTableWidget *m_table;

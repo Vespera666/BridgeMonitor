@@ -42,7 +42,7 @@ MonitorPointEditDialog::MonitorPointEditDialog(QWidget *parent)
     main->addLayout(form);
     main->addSpacing(15);
     main->addLayout(btnLayout);
-    main->setContentsMargins(30, 30, 30, 30);
+    main->setContentsMargins(24, 24, 24, 24);
 
     connect(btnOk, &QPushButton::clicked, this, &MonitorPointEditDialog::slotConfirm);
     connect(btnCancel, &QPushButton::clicked, this, &MonitorPointEditDialog::slotCancel);
@@ -56,7 +56,7 @@ void MonitorPointEditDialog::setEditTarget(const MonitoringPoint &mp)
     m_lePointId->setText(mp.pointId);
     m_leSection->setText(mp.sectionName);
     m_deInstall->setDate(mp.installDate);
-    // 设置数据类型
+
     int idx = m_cmbDataType->findText(mp.dataType);
     if (idx >= 0)
         m_cmbDataType->setCurrentIndex(idx);

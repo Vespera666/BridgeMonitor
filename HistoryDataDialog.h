@@ -24,15 +24,13 @@
 #include "DataTableModel.h"
 #include "monitorpoint.h"
 
-// ── 每种传感器类型的字段元信息 ──
 struct SensorFieldInfo
 {
     QStringList fieldNames;
     QStringList fieldUnits;
-    int fieldCount;    // 1=单字段直接读CSV, 2=双字段需合并-A/-B
+    int fieldCount;
 };
 
-// ── 每个 Tab 页的独立控件集合 ──
 struct HistoryTabPage
 {
     QWidget *widget = nullptr;
@@ -47,20 +45,17 @@ struct HistoryTabPage
     QSplitter *splitter = nullptr;
 };
 
-// 历史数据展示对话框 —— 按传感器类型分Tab，不依赖传感器绑定
 class HistoryDataDialog : public QDialog
 {
     Q_OBJECT
 public:
     explicit HistoryDataDialog(QWidget *parent = nullptr);
 
-    // 根据 dataType 获取字段元信息
     static SensorFieldInfo fieldInfoForType(const QString &dataType);
 
 private:
     const QString MONITOR_FILE = "monitor_storage.txt";
 
-    // 7 种传感器类型
     const QStringList SENSOR_TYPES = {
         "索力监测传感器", "挠度传感器", "振动监测传感器",
         "支座位移传感器", "伸缩缝监测传感器", "风速风向传感器", "温湿度监测传感器",

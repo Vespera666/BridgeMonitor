@@ -27,11 +27,10 @@ public:
     explicit MonitorPointManageDialog(QWidget *parent = nullptr);
 
 private:
-    // 文件常量
+
     const QString MONITOR_FILE = "monitor_storage.txt";
     const QString SENSOR_FILE = "sensor_storage.txt";
 
-    // UI控件
     QTableView *m_tableView;
     MonitorPointTableModel *m_tableModel;
 
@@ -46,14 +45,12 @@ private:
     void clearTable();
     void refreshBindCombobox();
 
-    // 文件读写
     QVector<MonitoringPoint> loadAllMonitorPoints();
     bool saveMonitorPoint(const MonitoringPoint &mp, bool isUpdate, const QString &oldPointId);
     bool deletePointById(const QString &pointId);
     QString getBindSensorByPointId(const QString &pid);
     QStringList loadAllSensorModel();
 
-    // ===== 新增：一对一绑定相关函数 =====
     bool isPointAlreadyBound(const QString &pointId);
     bool bindSensorToPoint(const QString &sensorId, const QString &pointId);
     bool unbindPoint(const QString &pointId);

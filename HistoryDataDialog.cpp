@@ -1,4 +1,5 @@
 #include "HistoryDataDialog.h"
+#include "StyleConstants.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QHeaderView>
@@ -7,7 +8,6 @@
 #include <algorithm>
 #include <QtCharts/QChart>
 
-// ── dataType → 字段元信息映射 ──
 SensorFieldInfo HistoryDataDialog::fieldInfoForType(const QString &dataType)
 {
     if (dataType == "风速风向传感器")
@@ -101,11 +101,11 @@ void HistoryDataDialog::createTabPage(int index)
     filterLayout->addWidget(tab.btnQuery);
     filterLayout->addStretch();
 
-    filterGroup->setMaximumHeight(80);
+    filterGroup->setMaximumHeight(85);
 
     // ── 传感器信息标签 ──
     tab.labInfo = new QLabel("请选择一个监测点");
-    tab.labInfo->setStyleSheet("color: #555; font-weight: bold; padding: 4px;");
+    StyleConstants::applyCssClass(tab.labInfo, StyleConstants::kCssInfo);
 
     // ── 表格 ──
     tab.tableModel = new DataTableModel(tab.widget);
@@ -122,7 +122,9 @@ void HistoryDataDialog::createTabPage(int index)
     {
         auto *emptyChart = new QChart();
         emptyChart->setTitle("查询数据后此处显示折线图");
+        emptyChart->setBackgroundBrush(QBrush(QColor("#FFFFFF")));
         tab.chartView->setChart(emptyChart);
+        tab.chartView->setBackgroundBrush(QBrush(QColor("#F5F6FA")));
     }
 
     // ── 上下分割器 ──
@@ -192,7 +194,7 @@ QVector<MonitoringPoint> HistoryDataDialog::loadAllMonitorPoints()
     return res;
 }
 
-// ── 查找 CSV 文件路径 ──
+
 QString HistoryDataDialog::findCsvPath(const QString &pointId) const
 {
     const QString fileName = pointId + ".csv";
@@ -223,7 +225,7 @@ void HistoryDataDialog::filterByDateRange(QVector<DataPoint> &data,
     data = filtered;
 }
 
-// ── 加载监测点数据（不依赖传感器绑定） ──
+
 QVector<DataPoint> HistoryDataDialog::loadDataForPoint(const QString &pointId,
                                                        const QString &dataType,
                                                        const QDateTime &start,
@@ -231,7 +233,7 @@ QVector<DataPoint> HistoryDataDialog::loadDataForPoint(const QString &pointId,
 {
     SensorFieldInfo info = fieldInfoForType(dataType);
 
-    // ── 单字段：直接读 {pointId}.csv ──
+
     if (info.fieldCount == 1) {
         QString csvPath = findCsvPath(pointId);
         if (!csvPath.isEmpty()) {
@@ -264,7 +266,7 @@ QVector<DataPoint> HistoryDataDialog::loadDataForPoint(const QString &pointId,
         }
     }
 
-    // ── 双字段：合并 {pointId}-A.csv + {pointId}-B.csv ──
+
     if (info.fieldCount == 2) {
         QString pathA = findCsvPath(pointId + "-A");
         QString pathB = findCsvPath(pointId + "-B");
@@ -320,7 +322,7 @@ QVector<DataPoint> HistoryDataDialog::loadDataForPoint(const QString &pointId,
         }
     }
 
-    // ── 回退：生成模拟数据 ──
+
     qint64 totalSecs = start.secsTo(end);
     if (totalSecs <= 0)
         return {};
@@ -341,7 +343,7 @@ QVector<DataPoint> HistoryDataDialog::loadDataForPoint(const QString &pointId,
     return mockData;
 }
 
-// ── 静态图表更新 ──
+
 void HistoryDataDialog::updateChartForView(QChartView *chartView,
                                            const QVector<DataPoint> &data,
                                            const QStringList &fieldNames)
@@ -353,6 +355,8 @@ void HistoryDataDialog::updateChartForView(QChartView *chartView,
     auto *chart = new QChart();
     chart->setTitle("历史数据趋势");
     chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->setBackgroundBrush(QBrush(QColor("#FFFFFF")));
+    chartView->setBackgroundBrush(QBrush(QColor("#F5F6FA")));
 
     if (data.isEmpty()) {
         chartView->setChart(chart);
@@ -366,12 +370,18 @@ void HistoryDataDialog::updateChartForView(QChartView *chartView,
 
     auto *axisY = new QValueAxis();
     axisY->setLabelFormat("%.1f");
+    axisY->setTitleText(fieldNames.size() >= 1 ? fieldNames[0] : "");
     chart->addAxis(axisY, Qt::AlignLeft);
 
-    const QList<QColor> colors = {
-        QColor("#e74c3c"), QColor("#2980b9"), QColor("#27ae60"),
-        QColor("#8e44ad"), QColor("#e67e22"), QColor("#1abc9c"),
-    };
+    QValueAxis *axisY2 = nullptr;
+    if (fieldNames.size() >= 2) {
+        axisY2 = new QValueAxis();
+        axisY2->setLabelFormat("%.1f");
+        axisY2->setTitleText(fieldNames[1]);
+        chart->addAxis(axisY2, Qt::AlignRight);
+    }
+
+    const auto &colors = StyleConstants::chartColors();
 
     for (int fi = 0; fi < fieldNames.size(); fi++) {
         auto *series = new QLineSeries();
@@ -387,13 +397,12 @@ void HistoryDataDialog::updateChartForView(QChartView *chartView,
 
         chart->addSeries(series);
         series->attachAxis(axisX);
-        series->attachAxis(axisY);
+        series->attachAxis((fi == 0 || !axisY2) ? axisY : axisY2);
     }
 
     chartView->setChart(chart);
 }
 
-// ── 查询 ──
 void HistoryDataDialog::slotQuery(int tabIndex)
 {
     if (tabIndex < 0 || tabIndex >= m_tabs.size())
@@ -414,32 +423,28 @@ void HistoryDataDialog::slotQuery(int tabIndex)
         return;
     }
 
-    // 从当前 Tab 的传感器类型确定字段信息
     QString dataType = SENSOR_TYPES[tabIndex];
     SensorFieldInfo info = fieldInfoForType(dataType);
 
-    // 加载数据（不依赖传感器绑定）
     QString csvPath = findCsvPath(pointId);
     QVector<DataPoint> data = loadDataForPoint(pointId, dataType, start, end);
     QString sourceTag = csvPath.isEmpty() ? "模拟数据" : "真实数据";
 
-    // 更新表格
     QStringList headers = makeHeaders(info.fieldNames, info.fieldUnits);
     tab.tableModel->loadData(data, headers);
 
-    // 更新图表
     updateChartForView(tab.chartView, data, info.fieldNames);
 
-    // 更新信息标签
     tab.labInfo->setText(
         QString("监测点【%1】| 数据类型：%2 | 数据条数：%3 | 来源：%4")
             .arg(pointId)
             .arg(dataType)
             .arg(data.size())
             .arg(sourceTag));
+    StyleConstants::applyCssClass(tab.labInfo,
+        (sourceTag == "真实数据") ? StyleConstants::kCssSuccess : StyleConstants::kCssWarning);
 }
 
-// ── 监测点切换 ──
 void HistoryDataDialog::slotMonitorChanged(int tabIndex)
 {
     if (tabIndex < 0 || tabIndex >= m_tabs.size())
@@ -452,19 +457,18 @@ void HistoryDataDialog::slotMonitorChanged(int tabIndex)
     QString pointId = tab.cbxPoint->currentData().toString();
     bool hasCsv = !findCsvPath(pointId).isEmpty();
 
-    // 也检查双字段传感器（FS/WSD）的 -A 文件
     if (!hasCsv)
         hasCsv = !findCsvPath(pointId + "-A").isEmpty();
 
     if (hasCsv) {
         tab.labInfo->setText(
             QString("监测点【%1】已有真实数据 ✓ | 点击查询按钮查看历史趋势").arg(pointId));
-        tab.labInfo->setStyleSheet("color: #27ae60; font-weight: bold; padding: 4px;");
+        StyleConstants::applyCssClass(tab.labInfo, StyleConstants::kCssSuccess);
         tab.btnQuery->setEnabled(true);
     } else {
         tab.labInfo->setText(
             QString("监测点【%1】无数据文件，查询时将使用模拟数据").arg(pointId));
-        tab.labInfo->setStyleSheet("color: #e67e22; font-weight: bold; padding: 4px;");
+        StyleConstants::applyCssClass(tab.labInfo, StyleConstants::kCssWarning);
         tab.btnQuery->setEnabled(true);
     }
 }

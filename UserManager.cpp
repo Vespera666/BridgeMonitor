@@ -8,7 +8,7 @@ UserManager::UserManager(const QString &filePath)
     load();
 }
 
-/* txt 格式：用户名,密码,角色 */
+
 void UserManager::load()
 {
     m_users.clear();

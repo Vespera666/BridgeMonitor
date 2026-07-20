@@ -5,7 +5,6 @@
 
 VibrationSensor::VibrationSensor()
 {
-    // 可在这里初始化设备基础信息
 }
 
 QString VibrationSensor::sensorType() const

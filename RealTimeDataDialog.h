@@ -25,8 +25,6 @@
 #include "monitorpoint.h"
 #include "sensor.h"
 
-// 实时数据展示 —— 左表格+右图表，只展示已绑定传感器的监测点
-// 绑定关系来自 sensor_storage.txt 最后一列
 class RealTimeDataDialog : public QDialog
 {
     Q_OBJECT
@@ -51,9 +49,9 @@ private:
 
     QVector<MonitoringPoint> loadAllMonitorPoints();
     QVector<Sensor *> loadAllSensors();
-    // 从 sensor_storage.txt 最后一列查绑定关系
+
     QString getBoundSensorModelByPoint(const QString &pointId);
-    // 返回所有已绑定的监测点 ID 列表
+
     QStringList getAllBoundPointIds();
     Sensor *findSensorByModel(const QString &model, const QVector<Sensor *> &sensors);
     SensorMeta extractSensorMeta(Sensor *s) const;

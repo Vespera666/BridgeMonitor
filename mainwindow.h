@@ -16,7 +16,6 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    // 构造函数接收登录者信息 + UserManager 指针（管理员需要调账号管理）
     explicit MainWindow(const QString &username,
                         const QString &role,
                         UserManager *userManager,
@@ -28,11 +27,11 @@ private slots:
     void on_sensorBtn_clicked();
     void on_historydataBtn_clicked();
     void on_currentdataBtn_clicked();
-    void on_accountBtn_clicked(); // 管理员专属
+    void on_accountBtn_clicked();
 
 private:
-    void applyPermissions(); // 根据角色隐藏/显示按钮
-
+    void rebuildCentralWidget();
+    void applyPermissions();
     Ui::MainWindow *ui;
     QString m_username;
     QString m_role;

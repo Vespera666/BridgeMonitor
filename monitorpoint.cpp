@@ -12,13 +12,11 @@ QString MonitoringPoint::sensorType() const
 
 void MonitoringPoint::bindSensor(Sensor *s)
 {
-    // 先解绑旧的
     if (sensor)
         sensor->boundPoint = nullptr;
 
     sensor = s;
 
-    // 设置反向指针
     if (s)
         s->boundPoint = this;
 }

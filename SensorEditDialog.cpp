@@ -23,12 +23,12 @@ SensorEditDialog::SensorEditDialog(QWidget *parent)
     m_deProduce->setDisplayFormat("yyyy-MM-dd");
     m_leFreq = new QLineEdit;
     m_cmbType = new QComboBox;
-    m_cmbType->addItems({"风速风向传感器",
-                         "振动监测传感器",
-                         "索力监测传感器",
+    m_cmbType->addItems({"索力监测传感器",
                          "挠度传感器",
+                         "振动监测传感器",
                          "支座位移传感器",
                          "伸缩缝监测传感器",
+                         "风速风向传感器",
                          "温湿度监测传感器"});
 
     form->addRow("设备名称：", m_leName);
@@ -50,7 +50,7 @@ SensorEditDialog::SensorEditDialog(QWidget *parent)
     main->addLayout(form);
     main->addSpacing(20);
     main->addLayout(btnLayout);
-    main->setContentsMargins(30, 30, 30, 30);
+    main->setContentsMargins(24, 24, 24, 24);
 
     connect(btnOk, &QPushButton::clicked, this, &SensorEditDialog::slotConfirm);
     connect(btnCancel, &QPushButton::clicked, this, &SensorEditDialog::slotCancel);

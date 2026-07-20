@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include <QHeaderView>
 #include "./ui_mainwindow.h"
 #include "AccountManageDialog.h"
 #include "HistoryDataDialog.h"
@@ -7,6 +6,11 @@
 #include "RealTimeDataDialog.h"
 #include "SensorManageDialog.h"
 #include "UserManager.h"
+
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QSizePolicy>
+#include <QVBoxLayout>
 
 MainWindow::MainWindow(const QString &username,
                        const QString &role,
@@ -20,9 +24,11 @@ MainWindow::MainWindow(const QString &username,
 {
     ui->setupUi(this);
 
-    // 窗口标题显示当前用户
     setWindowTitle(
         QStringLiteral("万州三桥桥梁监测系统  —  当前用户：%1 (%2)").arg(m_username, m_role));
+
+    // ── 用代码重建 centralWidget 布局，替代 .ui 中的绝对定位 ──
+    rebuildCentralWidget();
 
     applyPermissions();
 }
@@ -30,6 +36,54 @@ MainWindow::MainWindow(const QString &username,
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::rebuildCentralWidget()
+{
+    // 获取 .ui 中已创建的按钮（保留 objectName 以兼容自动槽连接）
+    QPushButton *btnMonitor = ui->monitorBtn;
+    QPushButton *btnSensor = ui->sensorBtn;
+    QPushButton *btnHistory = ui->historydataBtn;
+    QPushButton *btnCurrent = ui->currentdataBtn;
+    QPushButton *btnAccount = ui->accountBtn;
+
+    // 设置导航按钮 CSS class
+    btnMonitor->setProperty("cssClass", "nav-btn");
+    btnSensor->setProperty("cssClass", "nav-btn");
+    btnHistory->setProperty("cssClass", "nav-btn");
+    btnCurrent->setProperty("cssClass", "nav-btn");
+    btnAccount->setProperty("cssClass", "nav-btn");
+
+    // ── 左侧导航面板 ──
+    QWidget *navPanel = new QWidget();
+    navPanel->setFixedWidth(140);
+    QVBoxLayout *navLayout = new QVBoxLayout(navPanel);
+    navLayout->setSpacing(10);
+    navLayout->setContentsMargins(0, 0, 0, 0);
+
+    navLayout->addStretch(1);
+    navLayout->addWidget(btnMonitor);
+    navLayout->addWidget(btnSensor);
+    navLayout->addWidget(btnHistory);
+    navLayout->addWidget(btnCurrent);
+    navLayout->addWidget(btnAccount);
+    navLayout->addStretch(1);
+
+    // ── 右侧背景图片 ──
+    QLabel *bgLabel = new QLabel();
+    bgLabel->setPixmap(QPixmap(":/images/screenshot.png"));
+    bgLabel->setScaledContents(true);
+    bgLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // ── 主布局 ──
+    QWidget *centralWidget = new QWidget(this);
+    QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
+    mainLayout->setContentsMargins(20, 20, 20, 20);
+    mainLayout->setSpacing(20);
+    mainLayout->addWidget(navPanel);
+    mainLayout->addWidget(bgLabel, 1);
+
+    setCentralWidget(centralWidget);
 }
 
 void MainWindow::on_monitorBtn_clicked()
@@ -59,16 +113,12 @@ void MainWindow::on_currentdataBtn_clicked()
 void MainWindow::applyPermissions()
 {
     if (m_role == "analyst") {
-        // 分析师：只看数据
         ui->monitorBtn->hide();
         ui->sensorBtn->hide();
         ui->accountBtn->hide();
-        // historydataBtn 和 currentdataBtn 保持可见
     } else if (m_role == "engineer") {
-        // 工程师：除账号管理外都可见
         ui->accountBtn->hide();
     }
-    // admin：全部可见（不隐藏任何按钮）
 }
 
 void MainWindow::on_accountBtn_clicked()

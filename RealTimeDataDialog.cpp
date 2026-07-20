@@ -1,5 +1,6 @@
 #include "RealTimeDataDialog.h"
 #include "HistoryDataDialog.h"
+#include "StyleConstants.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QPainter>
@@ -31,14 +32,13 @@ void RealTimeDataDialog::initUI()
 
     m_splitter = new QSplitter(Qt::Horizontal);
 
-    // ══ 左侧：表格 ══
     QWidget *leftPanel = new QWidget();
     QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setContentsMargins(0, 0, 0, 0);
     leftLayout->setSpacing(6);
 
     m_labTableHint = new QLabel("表格展示所有已绑定传感器的监测点最新数据");
-    m_labTableHint->setStyleSheet("color: #555; font-weight: bold; padding: 2px;");
+    StyleConstants::applyCssClass(m_labTableHint, StyleConstants::kCssInfo);
 
     m_tableModel = new RealTimeDataModel(this);
     m_tableView = new QTableView();
@@ -58,7 +58,6 @@ void RealTimeDataDialog::initUI()
     leftLayout->addWidget(m_tableView, 1);
     leftLayout->addLayout(btnRow);
 
-    // ══ 右侧：图表 ══
     QWidget *rightPanel = new QWidget();
     QVBoxLayout *rightLayout = new QVBoxLayout(rightPanel);
     rightLayout->setContentsMargins(0, 0, 0, 0);
@@ -66,7 +65,7 @@ void RealTimeDataDialog::initUI()
 
     QHBoxLayout *chartCtrlRow = new QHBoxLayout();
     m_labChartHint = new QLabel("请在左侧表格中选中一个监测点以查看波形图");
-    m_labChartHint->setStyleSheet("color: #555; font-weight: bold;");
+    StyleConstants::applyCssClass(m_labChartHint, StyleConstants::kCssInfo);
     chartCtrlRow->addWidget(m_labChartHint);
     chartCtrlRow->addStretch();
     chartCtrlRow->addWidget(new QLabel("展示条数："));
@@ -82,7 +81,9 @@ void RealTimeDataDialog::initUI()
     {
         auto *emptyChart = new QChart();
         emptyChart->setTitle("选中监测点后此处显示实时波形图");
+        emptyChart->setBackgroundBrush(QBrush(QColor("#FFFFFF")));
         m_chartView->setChart(emptyChart);
+        m_chartView->setBackgroundBrush(QBrush(QColor("#F5F6FA")));
     }
 
     rightLayout->addLayout(chartCtrlRow);
@@ -95,7 +96,6 @@ void RealTimeDataDialog::initUI()
 
     mainLayout->addWidget(m_splitter, 1);
 
-    // 信号槽（按钮和spinbox在initUI中连接；selectionModel在refreshTable后连接）
     connect(m_btnRefresh, &QPushButton::clicked, this, &RealTimeDataDialog::slotRefresh);
     connect(m_spinCount,
             QOverload<int>::of(&QSpinBox::valueChanged),
@@ -103,7 +103,6 @@ void RealTimeDataDialog::initUI()
             &RealTimeDataDialog::slotCountChanged);
 }
 
-// ── 从 sensor_storage.txt 最后一列：查某个监测点被哪个传感器型号绑定 ──
 QString RealTimeDataDialog::getBoundSensorModelByPoint(const QString &pointId)
 {
     QFile f(SENSOR_FILE);
@@ -130,7 +129,6 @@ QString RealTimeDataDialog::getBoundSensorModelByPoint(const QString &pointId)
     return "";
 }
 
-// ── 从 sensor_storage.txt 最后一列：获取所有已绑定的监测点 ──
 QStringList RealTimeDataDialog::getAllBoundPointIds()
 {
     QStringList ids;
@@ -156,7 +154,6 @@ QStringList RealTimeDataDialog::getAllBoundPointIds()
     return ids;
 }
 
-// ── 刷新表格：只加载已绑定的监测点 ──
 void RealTimeDataDialog::refreshTable()
 {
     QVector<MonitoringPoint> emptyPoints;
@@ -167,7 +164,6 @@ void RealTimeDataDialog::refreshTable()
     QVector<MonitoringPoint> allPoints = loadAllMonitorPoints();
     QVector<Sensor *> allSensors = loadAllSensors();
 
-    // 从 sensor_storage.txt 获取已绑定的监测点
     QStringList boundIds = getAllBoundPointIds();
 
     QVector<MonitoringPoint> boundPoints;
@@ -176,7 +172,7 @@ void RealTimeDataDialog::refreshTable()
 
     for (const MonitoringPoint &mp : allPoints) {
         if (!boundIds.contains(mp.pointId))
-            continue; // 未绑定 → 不显示
+            continue;
 
         QString sensorModel = getBoundSensorModelByPoint(mp.pointId);
         Sensor *s = findSensorByModel(sensorModel, allSensors);
@@ -186,7 +182,6 @@ void RealTimeDataDialog::refreshTable()
         boundPoints.append(mp);
         boundSensorMetas.append(extractSensorMeta(s));
 
-        // 读取该监测点最新一条数据（不依赖传感器列数校验）
         auto readLatestFromCsv = [](const QString &path) -> DataPoint {
             DataPoint dp;
             QFile file(path);
@@ -222,7 +217,6 @@ void RealTimeDataDialog::refreshTable()
             DataPoint dp = readLatestFromCsv(csvPath);
             latestDataList.append(dp);
         } else if (!pathA.isEmpty() || !pathB.isEmpty()) {
-            // 拆分文件：取最后一行合并
             DataPoint dpA = pathA.isEmpty() ? DataPoint() : readLatestFromCsv(pathA);
             DataPoint dpB = pathB.isEmpty() ? DataPoint() : readLatestFromCsv(pathB);
             DataPoint merged;
@@ -242,7 +236,6 @@ void RealTimeDataDialog::refreshTable()
         QString("已绑定监测点：%1 个 | 点击某行可在右侧查看波形")
             .arg(boundPoints.size()));
 
-    // 数据加载完成后，连接选中行信号（避免空模型时触发）
     if (m_tableView->selectionModel()) {
         connect(m_tableView->selectionModel(),
                 &QItemSelectionModel::currentRowChanged,
@@ -255,7 +248,6 @@ void RealTimeDataDialog::refreshTable()
     allSensors.clear();
 }
 
-// ── 选中行 → 更新波形图 ──
 void RealTimeDataDialog::slotRowSelected(const QModelIndex &current,
                                          const QModelIndex & /*previous*/)
 {
@@ -292,7 +284,6 @@ void RealTimeDataDialog::slotRefresh()
     }
 }
 
-// ── 波形图绘制 ──
 void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
 {
     QChart *oldChart = m_chartView->chart();
@@ -301,8 +292,9 @@ void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
 
     auto *chart = new QChart();
     chart->setTitle(QString("监测点 %1 — 最近 %2 条数据").arg(pointId).arg(count));
+    chart->setBackgroundBrush(QBrush(QColor("#FFFFFF")));
+    m_chartView->setBackgroundBrush(QBrush(QColor("#F5F6FA")));
 
-    // 从绑定传感器获取字段名（用于图表图例）
     QString sensorModel = getBoundSensorModelByPoint(pointId);
     QStringList fieldNames;
 
@@ -317,7 +309,6 @@ void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
     if (fieldNames.isEmpty())
         fieldNames = {"数值"};
 
-    // ── 加载 CSV 数据：先试单文件，再试拆分 -A/-B ──
     QVector<DataPoint> allData;
 
     QString csvPath = findCsvPath(pointId);
@@ -327,7 +318,6 @@ void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
     bool hasSplit = (!pathA.isEmpty() || !pathB.isEmpty());
 
     if (!csvPath.isEmpty() && !hasSplit) {
-        // 只有单文件：按实际 CSV 列数读取
         QFile file(csvPath);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
@@ -353,7 +343,6 @@ void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
             file.close();
         }
     } else if (hasSplit) {
-        // 拆分文件：合并 -A/-B
         auto readToMap = [](const QString &path) -> QMap<qint64, double> {
             QMap<qint64, double> map;
             QFile f(path);
@@ -423,12 +412,18 @@ void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
 
     auto *axisY = new QValueAxis();
     axisY->setLabelFormat("%.1f");
+    axisY->setTitleText(fieldNames.size() >= 1 ? fieldNames[0] : "");
     chart->addAxis(axisY, Qt::AlignLeft);
 
-    const QList<QColor> colors = {
-        QColor("#e74c3c"), QColor("#2980b9"), QColor("#27ae60"),
-        QColor("#8e44ad"), QColor("#e67e22"), QColor("#1abc9c"),
-    };
+    QValueAxis *axisY2 = nullptr;
+    if (fieldNames.size() >= 2) {
+        axisY2 = new QValueAxis();
+        axisY2->setLabelFormat("%.1f");
+        axisY2->setTitleText(fieldNames[1]);
+        chart->addAxis(axisY2, Qt::AlignRight);
+    }
+
+    const auto &colors = StyleConstants::chartColors();
 
     for (int fi = 0; fi < fieldNames.size(); fi++) {
         auto *series = new QLineSeries();
@@ -444,13 +439,12 @@ void RealTimeDataDialog::updateRealtimeChart(const QString &pointId, int count)
 
         chart->addSeries(series);
         series->attachAxis(axisX);
-        series->attachAxis(axisY);
+        series->attachAxis((fi == 0 || !axisY2) ? axisY : axisY2);
     }
 
     m_chartView->setChart(chart);
 }
 
-// ── 文件路径 ──
 QString RealTimeDataDialog::findCsvPath(const QString &pointId) const
 {
     const QString fileName = pointId + ".csv";
@@ -468,7 +462,6 @@ QString RealTimeDataDialog::findCsvPath(const QString &pointId) const
     return {};
 }
 
-// ── 读取监测点（4列：编号,断面,日期,类型） ──
 QVector<MonitoringPoint> RealTimeDataDialog::loadAllMonitorPoints()
 {
     QVector<MonitoringPoint> res;
@@ -503,7 +496,6 @@ QVector<MonitoringPoint> RealTimeDataDialog::loadAllMonitorPoints()
     return res;
 }
 
-// ── 传感器读取（不变） ──
 QVector<Sensor *> RealTimeDataDialog::loadAllSensors()
 {
     QVector<Sensor *> res;

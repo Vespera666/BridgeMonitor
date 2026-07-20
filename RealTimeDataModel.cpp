@@ -13,7 +13,6 @@ void RealTimeDataModel::loadData(const QVector<MonitoringPoint> &points,
     m_sensorMetas = sensorMetas;
     m_latestData = latestData;
 
-    // 收集所有传感器字段名的并集作为动态列头
     QStringList unionFields;
     for (const SensorMeta &meta : sensorMetas) {
         for (const QString &fn : meta.fieldNames) {
@@ -37,8 +36,7 @@ int RealTimeDataModel::columnCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
         return 0;
-    // 固定列: 监测点编号, 断面名称, 传感器类型, 传感器型号, 采集时间
-    // + 动态数值列
+
     return 5 + m_valueHeaders.size();
 }
 
@@ -54,7 +52,7 @@ QVariant RealTimeDataModel::data(const QModelIndex &index, int role) const
     const MonitoringPoint &mp = m_points[r];
 
     if (role == Qt::DisplayRole) {
-        // ---- 固定列 ----
+
         switch (c) {
         case 0:
             return mp.pointId;
@@ -69,14 +67,14 @@ QVariant RealTimeDataModel::data(const QModelIndex &index, int role) const
                        ? m_latestData[r].timeStamp.toString("yyyy-MM-dd HH:mm:ss")
                        : QString();
         default: {
-            // ---- 动态数值列 ----
+
             int fieldIdx = c - 5;
             if (r >= m_sensorMetas.size())
                 return "—";
             const QStringList &sensorFields = m_sensorMetas[r].fieldNames;
             int posInSensor = sensorFields.indexOf(m_valueHeaders[fieldIdx]);
             if (posInSensor < 0)
-                return "—"; // 该传感器无此字段
+                return "—";
             if (r >= m_latestData.size())
                 return "—";
             const DataPoint &dp = m_latestData[r];

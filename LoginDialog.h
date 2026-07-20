@@ -14,7 +14,6 @@ class LoginDialog : public QDialog
 public:
     explicit LoginDialog(UserManager *um, QWidget *parent = nullptr);
 
-    // 登录成功后可获取用户信息
     QString loggedUsername() const;
     QString loggedRole() const;
 

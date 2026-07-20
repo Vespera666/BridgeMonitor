@@ -1,5 +1,6 @@
 #include "LoginDialog.h"
 #include "RegisterDialog.h"
+#include "StyleConstants.h"
 #include "UserManager.h"
 
 #include <QFormLayout>
@@ -13,7 +14,6 @@ LoginDialog::LoginDialog(UserManager *um, QWidget *parent)
     setWindowTitle(QStringLiteral("用户登录"));
     setFixedSize(320, 220);
 
-    // ── 控件 ──
     m_usernameEdit = new QLineEdit(this);
     m_usernameEdit->setPlaceholderText(QStringLiteral("请输入用户名"));
 
@@ -22,32 +22,28 @@ LoginDialog::LoginDialog(UserManager *um, QWidget *parent)
     m_passwordEdit->setEchoMode(QLineEdit::Password);
 
     m_errorLabel = new QLabel(this);
-    m_errorLabel->setStyleSheet("color: red;");
+    StyleConstants::applyCssClass(m_errorLabel, StyleConstants::kCssError);
     m_errorLabel->hide();
 
     auto *registerBtn = new QPushButton(QStringLiteral("注册"), this);
     auto *loginBtn = new QPushButton(QStringLiteral("登录"), this);
     auto *cancelBtn = new QPushButton(QStringLiteral("退出"), this);
 
-    // ── 表单 ──
     auto *formLayout = new QFormLayout;
     formLayout->addRow(QStringLiteral("用户名："), m_usernameEdit);
     formLayout->addRow(QStringLiteral("密  码："), m_passwordEdit);
 
-    // ── 按钮行 ──
     auto *btnLayout = new QHBoxLayout;
     btnLayout->addWidget(registerBtn);
     btnLayout->addStretch();
     btnLayout->addWidget(loginBtn);
     btnLayout->addWidget(cancelBtn);
 
-    // ── 顶层 ──
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->addLayout(formLayout);
     mainLayout->addWidget(m_errorLabel);
     mainLayout->addLayout(btnLayout);
 
-    // ── 信号 ──
     connect(loginBtn, &QPushButton::clicked, this, &LoginDialog::onLoginClicked);
     connect(registerBtn, &QPushButton::clicked, this, &LoginDialog::onRegisterClicked);
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
@@ -80,7 +76,7 @@ void LoginDialog::onLoginClicked()
 void LoginDialog::onRegisterClicked()
 {
     RegisterDialog dlg(m_userManager, this);
-    dlg.exec(); // 注册弹窗，用户注册完自动关闭
+    dlg.exec();
 }
 
 QString LoginDialog::loggedUsername() const

@@ -35,9 +35,9 @@ QVector<DataPoint> WindSensor::generateMockData(int count)
     for (int i = 0; i < count; i++) {
         DataPoint dp;
         dp.timeStamp = base.addSecs(i * frequency);
-        // 风速: 0 ~ 30 m/s，保留一位小数
+
         double speed = rng->bounded(300) / 10.0;
-        // 风向: 0 ~ 360°
+
         double direction = rng->bounded(3600) / 10.0;
         dp.value.append(speed);
         dp.value.append(direction);

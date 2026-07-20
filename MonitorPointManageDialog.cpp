@@ -14,10 +14,9 @@ MonitorPointManageDialog::MonitorPointManageDialog(QWidget *parent)
 void MonitorPointManageDialog::initUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(12);
-    mainLayout->setContentsMargins(15, 15, 15, 15);
+    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(12, 12, 12, 12);
 
-    // 顶部按钮栏
     QHBoxLayout *btnLayout = new QHBoxLayout();
     QPushButton *btnAdd = new QPushButton("新增监测点");
     QPushButton *btnEdit = new QPushButton("修改选中");
@@ -29,7 +28,6 @@ void MonitorPointManageDialog::initUI()
     btnLayout->addWidget(btnRefresh);
     btnLayout->addStretch();
 
-    // 表格视图
     m_tableModel = new MonitorPointTableModel(this);
     m_tableView = new QTableView();
     m_tableView->setModel(m_tableModel);
@@ -37,8 +35,8 @@ void MonitorPointManageDialog::initUI()
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableView->horizontalHeader()->setStretchLastSection(true);
     m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    m_tableView->setAlternatingRowColors(true);
 
-    // 底部【监测点-传感器绑定区域】
     QGroupBox *groupBind = new QGroupBox("监测点 ↔ 传感器绑定（一个监测点仅允许绑定1个传感器）");
     QHBoxLayout *bindLayout = new QHBoxLayout(groupBind);
 
@@ -58,14 +56,12 @@ void MonitorPointManageDialog::initUI()
     bindLayout->addWidget(m_btnBind);
     bindLayout->addWidget(m_btnUnBind);
     bindLayout->addStretch();
-    groupBind->setMaximumHeight(90);
+    groupBind->setMaximumHeight(85);
 
-    // 组装布局
     mainLayout->addLayout(btnLayout);
     mainLayout->addWidget(m_tableView);
     mainLayout->addWidget(groupBind);
 
-    // 信号槽
     connect(btnAdd, &QPushButton::clicked, this, &MonitorPointManageDialog::slotAddPoint);
     connect(btnEdit, &QPushButton::clicked, this, &MonitorPointManageDialog::slotEditPoint);
     connect(btnDel, &QPushButton::clicked, this, &MonitorPointManageDialog::slotDelPoint);
@@ -226,7 +222,6 @@ bool MonitorPointManageDialog::deletePointById(const QString &pointId)
     if (!find)
         return false;
 
-    // 删除监测点，同步解绑
     unbindPoint(pointId);
 
     if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
@@ -239,7 +234,6 @@ bool MonitorPointManageDialog::deletePointById(const QString &pointId)
 
 QString MonitorPointManageDialog::getBindSensorByPointId(const QString &pid)
 {
-    // 从 sensor_storage.txt 最后一列查找
     QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return "";
@@ -257,7 +251,7 @@ QString MonitorPointManageDialog::getBindSensorByPointId(const QString &pid)
         QStringList cols = line.split(",", Qt::KeepEmptyParts);
         if (cols.size() >= 8 && cols[7] == pid) {
             f.close();
-            return cols[2]; // 返回型号
+            return cols[2];
         }
     }
     f.close();
@@ -288,7 +282,6 @@ QStringList MonitorPointManageDialog::loadAllSensorModel()
     return res;
 }
 
-// ====================== 一对一绑定函数实现 ======================
 bool MonitorPointManageDialog::isPointAlreadyBound(const QString &pointId)
 {
     QFile f(SENSOR_FILE);
@@ -317,7 +310,6 @@ bool MonitorPointManageDialog::isPointAlreadyBound(const QString &pointId)
 
 bool MonitorPointManageDialog::unbindPoint(const QString &pointId)
 {
-    // 将 sensor_storage.txt 中该监测点对应记录的最后一列改回"未绑定"
     QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
@@ -352,10 +344,41 @@ bool MonitorPointManageDialog::unbindPoint(const QString &pointId)
 
 bool MonitorPointManageDialog::bindSensorToPoint(const QString &sensorId, const QString &pointId)
 {
-    // 先解绑
+    // ── 类型匹配校验 ──
+    {
+        QString senType;
+        QFile sf(SENSOR_FILE);
+        if (sf.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream st(&sf);
+            st.setEncoding(QStringConverter::Utf8);
+            bool skip = true;
+            while (!st.atEnd()) {
+                QStringList c = st.readLine().trimmed().split(",", Qt::KeepEmptyParts);
+                if (skip) { skip = false; continue; }
+                if (c.size() >= 7 && c[2] == sensorId) { senType = c[6]; break; }
+            }
+            sf.close();
+        }
+        QString monType;
+        QFile mf(MONITOR_FILE);
+        if (mf.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream st(&mf);
+            st.setEncoding(QStringConverter::Utf8);
+            bool skip = true;
+            while (!st.atEnd()) {
+                QStringList c = st.readLine().trimmed().split(",", Qt::KeepEmptyParts);
+                if (skip) { skip = false; continue; }
+                if (c.size() >= 1 && c[0] == pointId) { monType = (c.size() >= 4) ? c[3] : QString(); break; }
+            }
+            mf.close();
+        }
+        if (!senType.isEmpty() && !monType.isEmpty() && senType != monType) {
+            return false; // 类型不匹配，调用方会弹窗提示
+        }
+    }
+
     unbindPoint(pointId);
 
-    // 读写 sensor_storage.txt：找到该传感器型号未绑定的记录，修改最后一列
     QFile f(SENSOR_FILE);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
@@ -383,7 +406,6 @@ bool MonitorPointManageDialog::bindSensorToPoint(const QString &sensorId, const 
     }
 
     if (!found) {
-        // 所有该型号传感器都已绑定 → 追加新记录
         for (const QString &line : lines) {
             QStringList cols = line.split(",", Qt::KeepEmptyParts);
             if (cols.size() >= 8 && cols[2] == sensorId) {
@@ -403,7 +425,6 @@ bool MonitorPointManageDialog::bindSensorToPoint(const QString &sensorId, const 
     return true;
 }
 
-// ====================== 槽函数 ======================
 void MonitorPointManageDialog::slotAddPoint()
 {
     MonitorPointEditDialog dlg(this);
@@ -500,6 +521,36 @@ void MonitorPointManageDialog::slotDoBind()
                                          QMessageBox::Yes | QMessageBox::No);
         if (res != QMessageBox::Yes)
             return;
+    }
+
+    // 类型匹配校验（提前检查，给出明确提示）
+    {
+        QString senType, monType;
+        QFile sf(SENSOR_FILE);
+        if (sf.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream st(&sf); st.setEncoding(QStringConverter::Utf8); bool skip = true;
+            while (!st.atEnd()) {
+                QStringList c = st.readLine().trimmed().split(",", Qt::KeepEmptyParts);
+                if (skip) { skip = false; continue; }
+                if (c.size() >= 7 && c[2] == sensorId) { senType = c[6]; break; }
+            }
+            sf.close();
+        }
+        QFile mf(MONITOR_FILE);
+        if (mf.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream st(&mf); st.setEncoding(QStringConverter::Utf8); bool skip = true;
+            while (!st.atEnd()) {
+                QStringList c = st.readLine().trimmed().split(",", Qt::KeepEmptyParts);
+                if (skip) { skip = false; continue; }
+                if (c.size() >= 1 && c[0] == pointId) { monType = (c.size() >= 4) ? c[3] : QString(); break; }
+            }
+            mf.close();
+        }
+        if (!senType.isEmpty() && !monType.isEmpty() && senType != monType) {
+            QMessageBox::warning(this, "绑定失败",
+                QString("传感器类型【%1】与监测点数据类型【%2】不匹配，无法绑定！").arg(senType, monType));
+            return;
+        }
     }
 
     bool ok = bindSensorToPoint(sensorId, pointId);

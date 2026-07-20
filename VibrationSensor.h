@@ -8,7 +8,6 @@ class VibrationSensor : public Sensor
 public:
     VibrationSensor();
 
-    // 重写基类纯虚函数
     QString sensorType() const override;
     QStringList fieldNames() const override;
     QStringList fieldUnits() const override;

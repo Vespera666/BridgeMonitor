@@ -1,4 +1,5 @@
 #include "AccountManageDialog.h"
+#include "StyleConstants.h"
 #include "UserManager.h"
 
 #include <QHBoxLayout>
@@ -14,22 +15,25 @@ AccountManageDialog::AccountManageDialog(UserManager *um, QWidget *parent)
     setWindowTitle(QStringLiteral("账号管理"));
     setMinimumSize(450, 350);
 
-    // ── 表格 ──
-    m_table = new QTableWidget(0, 2, this); // 0 行 2 列
+
+    m_table = new QTableWidget(0, 2, this);
     m_table->setHorizontalHeaderLabels({QStringLiteral("用户名"), QStringLiteral("角色")});
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_table->setSelectionMode(QAbstractItemView::SingleSelection);
-    m_table->setEditTriggers(QAbstractItemView::NoEditTriggers); // 不可编辑
+    m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_table->setAlternatingRowColors(true);
 
-    // ── 提示标签 ──
     m_infoLabel = new QLabel(this);
 
-    // ── 按钮 ──
     auto *promoteBtn = new QPushButton(QStringLiteral("提升为工程师"), this);
     auto *demoteBtn = new QPushButton(QStringLiteral("降为分析师"), this);
     auto *deleteBtn = new QPushButton(QStringLiteral("删除用户"), this);
     auto *closeBtn = new QPushButton(QStringLiteral("关闭"), this);
+
+    // 按钮样式
+    StyleConstants::applyCssClass(deleteBtn, "btn-danger");
+    StyleConstants::applyCssClass(closeBtn, "btn-secondary");
 
     auto *btnLayout = new QHBoxLayout;
     btnLayout->addWidget(promoteBtn);
@@ -43,7 +47,7 @@ AccountManageDialog::AccountManageDialog(UserManager *um, QWidget *parent)
     mainLayout->addWidget(m_infoLabel);
     mainLayout->addLayout(btnLayout);
 
-    // ── 信号 ──
+
     connect(promoteBtn, &QPushButton::clicked, this, &AccountManageDialog::onPromoteClicked);
     connect(demoteBtn, &QPushButton::clicked, this, &AccountManageDialog::onDemoteClicked);
     connect(deleteBtn, &QPushButton::clicked, this, &AccountManageDialog::onDeleteClicked);
@@ -88,7 +92,7 @@ void AccountManageDialog::onDemoteClicked()
     if (user.isEmpty())
         return;
 
-    // 管理员不能降级自己
+
     if (m_userManager->roleOfUser(user) == "admin") {
         QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("不能降级管理员"));
         return;
@@ -104,7 +108,7 @@ void AccountManageDialog::onDeleteClicked()
     if (user.isEmpty())
         return;
 
-    // 管理员不能删除自己
+
     if (m_userManager->roleOfUser(user) == "admin") {
         QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("不能删除管理员账号"));
         return;

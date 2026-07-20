@@ -1,4 +1,5 @@
 #include "RegisterDialog.h"
+#include "StyleConstants.h"
 #include "UserManager.h"
 
 #include <QFormLayout>
@@ -25,7 +26,7 @@ RegisterDialog::RegisterDialog(UserManager *um, QWidget *parent)
     m_confirmEdit->setEchoMode(QLineEdit::Password);
 
     m_errorLabel = new QLabel(this);
-    m_errorLabel->setStyleSheet("color: red;");
+    StyleConstants::applyCssClass(m_errorLabel, StyleConstants::kCssError);
     m_errorLabel->hide();
 
     auto *okBtn = new QPushButton(QStringLiteral("确认注册"), this);
@@ -75,5 +76,5 @@ void RegisterDialog::onRegisterClicked()
         return;
     }
 
-    accept(); // 注册成功
+    accept();
 }

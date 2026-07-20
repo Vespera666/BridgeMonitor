@@ -8,7 +8,6 @@ class TemperatureHumiditySensor : public Sensor
 public:
     TemperatureHumiditySensor();
 
-    // 实现 Sensor 的纯虚函数
     QString sensorType() const override;
     QStringList fieldNames() const override;
     QStringList fieldUnits() const override;
